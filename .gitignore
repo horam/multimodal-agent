@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+.venv/
+
+# Environment files
+.env
+.env.*
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Cache
+.cache/
+
+# Personal credentials
+*.key
+

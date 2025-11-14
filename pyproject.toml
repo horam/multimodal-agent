@@ -1,0 +1,43 @@
+[project]
+name = "multimodal-agent"
+version = "0.1.0"
+description = "A multimodal AI agent using Google's Gemini models."
+authors = [
+    { name = "Horam", email = "your-email@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai",
+    "google-adk",
+    "python-dotenv",
+    "requests",
+]
+
+# This turns your tool into a command you can run:
+#     agent ask "hello"
+[project.scripts]
+agent = "multimodal_agent.cli:main"
+
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Code formatting + linting tools (optional but recommended)
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+select = ["E", "F", "I"]
+ignore = ["E501"]  # long lines allowed
