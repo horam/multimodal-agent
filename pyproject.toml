@@ -41,3 +41,20 @@ profile = "black"
 [tool.ruff]
 select = ["E", "F", "I"]
 ignore = ["E501"]  # long lines allowed
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-mock",
+  "pytest-cov",
+]
+
+[tool.coverage.run]
+source = ["multimodal_agent"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+

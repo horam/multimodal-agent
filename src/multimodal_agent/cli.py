@@ -25,7 +25,7 @@ def main():
         if prompt_length < 3:
             print('Error- correct usage:agent ask "your question"')
             return
-        prompt = system.argv[2]
+        prompt = " ".join(system.argv[2:])
         response = agent.ask(prompt)
         print(response)
 
@@ -35,7 +35,7 @@ def main():
             return
         image = system.argv[2]
         image_as_part = load_image_as_part(image)
-        prompt = system.argv[3]
+        prompt = " ".join(system.argv[3:])
         response = agent.ask_with_image(prompt, image_as_part)
         print(response)
     elif command == "chat":

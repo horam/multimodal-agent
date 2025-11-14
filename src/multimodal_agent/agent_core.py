@@ -3,6 +3,10 @@ from google import genai
 from google.genai.types import HttpOptions, Part
 from google.genai.errors import ServerError
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class MultiModalAgent:
     def __init__(self, model="gemini-2.5-flash", api_version="v1", client=None):
@@ -26,7 +30,7 @@ class MultiModalAgent:
             except ServerError as exception:
                 if str(exception.code) == "503":
                     wait = base_delay * (2 ** (attempt - 1))
-                    print(
+                    logger.warning(
                         f"Warning: Model overloaded (attempt {attempt}/{max_retries}). Retrying in {wait}s..."
                     )
                     time.sleep(wait)
@@ -37,7 +41,7 @@ class MultiModalAgent:
             except Exception:
                 raise
 
-        print("Model overloaded. Please try again later.")
+        logger.error("Model overloaded. Please try again later.")
         return None
 
     def ask_with_image(self, question: str, image: Part) -> str:
@@ -55,6 +59,7 @@ class MultiModalAgent:
         while True:
             user_input = input("You: ")
             if user_input.lower() == "exit":
+                logger.info("Chat session ended by user.")
                 print("Exiting chat. Goodbye!")
                 break
 
