@@ -113,6 +113,7 @@ Run with coverage:
 │       ├── cli</span><span>.py</span><span>
 │       ├── utils</span><span>.py</span><span>
 │       ├── logger</span><span>.py</span><span>
+│       ├── errors</span><span>.py</span><span>
 │       ├── VERSION
 │       └── tests/
 │           ├── test_agent_core</span><span>.py</span><span>
