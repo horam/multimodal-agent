@@ -1,8 +1,21 @@
 import sys as system
 import types
+from unittest.mock import MagicMock
 import pytest
 
 from multimodal_agent import cli, __version__
+
+
+@pytest.fixture(autouse=True)
+def mock_google_client(mocker):
+    """Mock genai.Client so no real Google API is touched."""
+    fake_client = MagicMock()
+    fake_client.models.generate_content.return_value = MagicMock(text="mocked")
+    mocker.patch(
+        "multimodal_agent.agent_core.genai.Client",
+        return_value=fake_client,
+    )
+    return fake_client
 
 
 # test cli version.
@@ -49,17 +62,28 @@ def test_cli_image(monkeypatch, capsys, mocker):
     assert "IMAGE_ANSWER: describe this" in out
 
 
-# Test invalid image scenario.
-def test_cli_image_invalid(monkeypatch, caplog):
+# Test invalid image.
+def test_cli_image_invalid(monkeypatch, caplog, mocker):
+    # Simulate: agent image bad.jpg "prompt"
     monkeypatch.setattr(
         system,
         "argv",
         ["agent", "image", "bad.jpg", "prompt"],
     )
 
-    # force CLI logger to use caplog handler.
+    # 1) Don't let MultiModalAgent hit the real Google client
+    fake_agent = mocker.Mock()
+    mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
+
+    # 2) Force image loader to fail so we trigger InvalidImageError
+    mocker.patch.object(
+        cli,
+        "load_image_as_part",
+        side_effect=Exception("boom"),
+    )
+
+    # 3) Route CLI logger into caplog's handler so we can assert on log output
     logger = cli.logger
-    # override handlers so caplog can catch the logs.
     logger.handlers = [caplog.handler]
     logger.setLevel("ERROR")
 
@@ -67,10 +91,14 @@ def test_cli_image_invalid(monkeypatch, caplog):
         with pytest.raises(SystemExit) as exit_info:
             cli.main()
 
+    # CLI should exit with code 1
     assert exit_info.value.code == 1
 
-    messages = [rec.message for rec in caplog.records]
+    # Collect log messages
+    messages = [rec.getMessage() for rec in caplog.records]
 
+    # The outer AgentError handler logs:
+    # "Agent failed: Cannot read image: bad.jpg"
     assert any("Cannot read image: bad.jpg" in msg for msg in messages)
 
 
