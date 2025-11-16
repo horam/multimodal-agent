@@ -1,0 +1,40 @@
+site_name: Multimodal Agent
+site_description: A modern multimodal AI agent built on Google Gemini.
+site_author: Horam
+repo_url: https://github.com/horam/multimodal-agent
+repo_name: horam/multimodal-agent
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.indexes
+    - toc.integrate
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - CLI Usage: cli.md
+  - Agent API: agent.md
+  - Errors & Exceptions: errors.md
+  - Logging: logging.md
+  - Examples: examples.md
+  - API Reference:
+      - multimodal_agent: api/multimodal_agent.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["src"]
