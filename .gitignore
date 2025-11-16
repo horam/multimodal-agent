@@ -9,12 +9,7 @@ venv/
 env/
 .venv/
 
-# Environment files
-.env
-.env.*
-
-# Build artifacts
-dist/
+# Distribution / packaging
 build/
 *.egg-info/
 

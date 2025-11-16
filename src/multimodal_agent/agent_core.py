@@ -13,9 +13,7 @@ class MultiModalAgent:
         if client:
             self.client = client
         else:
-            self.client = genai.Client(
-                http_options=HttpOptions(api_version=api_version)
-            )
+            self.client = genai.Client(http_options=HttpOptions(api_version=api_version))
 
         self.model = model
 
