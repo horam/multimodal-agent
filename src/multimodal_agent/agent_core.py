@@ -78,7 +78,7 @@ class MultiModalAgent:
 
             answer = response.text
             self.logger.info(f"Agent: {answer}")
-            
+
             # update chat history
             history.append(user_input)
             history.append(answer)

@@ -50,7 +50,7 @@ def test_cli_image_invalid(monkeypatch, caplog):
     # force CLI logger to use caplog handler.
     logger = cli.logger
     # override handlers so caplog can catch the logs.
-    logger.handlers = [caplog.handler]  
+    logger.handlers = [caplog.handler]
     logger.setLevel("ERROR")
 
     with caplog.at_level("ERROR"):
