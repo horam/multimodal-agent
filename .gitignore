@@ -1,26 +1,30 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.so
 
 # Virtual environments
-venv/
 .venv/
 env/
-.venv/
+venv/
+
+# Environment variables
+.env
+*.env
+.env.*
 
 # Distribution / packaging
 build/
+dist/
 *.egg-info/
 
-# IDE / OS files
+# VSCode / editors
 .vscode/
 .idea/
+
+# Coverage / testing
+.coverage
+htmlcov/
+
+# OS files
 .DS_Store
-
-# Cache
-.cache/
-
-# Personal credentials
-*.key
-
