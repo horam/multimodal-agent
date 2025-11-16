@@ -1,5 +1,6 @@
 import requests
 from google.genai.types import Part
+from multimodal_agent.errors import InvalidImageError
 
 
 def load_image_as_part(path: str, mime_type="image/jpeg") -> Part:
@@ -7,8 +8,11 @@ def load_image_as_part(path: str, mime_type="image/jpeg") -> Part:
     Load a local image file into a Part object.
     """
 
-    with open(path, "rb") as f:
-        image_bytes = f.read()
+    try:
+        with open(path, "rb") as f:
+            image_bytes = f.read()
+    except Exception as exception:
+        raise InvalidImageError(f"Failed to load image: {path}") from exception
 
     image_part = Part.from_bytes(
         data=image_bytes,
