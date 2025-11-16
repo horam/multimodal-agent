@@ -11,6 +11,9 @@ load_dotenv(ENV_PATH)
 from multimodal_agent.agent_core import MultiModalAgent
 from multimodal_agent.utils import load_image_as_part
 
+from .logger import get_logger
+logger = get_logger(__name__)
+
 
 def main():
     prompt_length = len(system.argv)
@@ -23,21 +26,21 @@ def main():
 
     if command == "ask":
         if prompt_length < 3:
-            print('Error- correct usage:agent ask "your question"')
+            logger.info('Error- correct usage:agent ask "your question"')
             return
         prompt = " ".join(system.argv[2:])
         response = agent.ask(prompt)
-        print(response)
+        logger.info(response)
 
     elif command == "image":
         if prompt_length < 4:
-            print('Error correct usage: agent image <img_path> "describe this"')
+            logger.info('Error correct usage: agent image <img_path> "describe this"')
             return
         image = system.argv[2]
         image_as_part = load_image_as_part(image)
         prompt = " ".join(system.argv[3:])
         response = agent.ask_with_image(prompt, image_as_part)
-        print(response)
+        logger.info(response)
     elif command == "chat":
         agent.chat()
         return
@@ -46,8 +49,8 @@ def main():
 
 
 def usage():
-    print("This is a multi-modal agent that generates text based on an input image.")
-    print(
+    logger.info("This is a multi-modal agent that generates text based on an input image.")
+    logger.info(
         """
         Usage:
             agent ask "your question"

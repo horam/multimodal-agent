@@ -2,14 +2,14 @@ import time
 from google import genai
 from google.genai.types import HttpOptions, Part
 from google.genai.errors import ServerError
+from .logger import get_logger
 
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class MultiModalAgent:
     def __init__(self, model="gemini-2.5-flash", api_version="v1", client=None):
+        self.logger = get_logger(__name__)
+        self.logger.info("Initializing MultiModal agent...")
         if client:
             self.client = client
         else:
@@ -20,6 +20,7 @@ class MultiModalAgent:
     def safe_generate_content(self, contents, max_retries=3, base_delay=1):
         for attempt in range(1, max_retries + 1):
             try:
+                self.logger.debug(f"Calling Gemini with contents: {contents}")
                 return self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
@@ -28,12 +29,15 @@ class MultiModalAgent:
             except ServerError as exception:
                 if str(exception.code) == "503":
                     wait = base_delay * (2 ** (attempt - 1))
-                    logger.warning(
+                    self.logger.warning(
                         f"Warning: Model overloaded (attempt {attempt}/{max_retries}). Retrying in {wait}s..."
                     )
                     time.sleep(wait)
                     continue
                 else:
+                    self.logger.error("Non-retry-able error occurred/{max_retries}"
+                    f"Retrying in {wait}s..."
+                                      )
                     raise
 
             except Exception:
