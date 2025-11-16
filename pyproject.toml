@@ -1,60 +1,56 @@
 [project]
 name = "multimodal-agent"
 version = "0.1.0"
-description = "A multimodal AI agent using Google's Gemini models."
+description = "A Python multimodal agent for interacting with Gemini models via text, images, and CLI."
 authors = [
-    { name = "Horam", email = "your-email@example.com" }
+    { name = "Horam", email = "horam.tech@google.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+
 dependencies = [
-    "google-genai",
-    "google-adk",
-    "python-dotenv",
-    "requests",
+    "google-genai>=1.4.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0"
 ]
 
-# This turns your tool into a command you can run:
-#     agent ask "hello"
+# OPTIONAL dependencies for development
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+]
+dev = [
+    "black",
+    "flake8",
+    "isort",
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "mkdocs",
+    "mkdocs-material",
+]
+
 [project.scripts]
 agent = "multimodal_agent.cli:main"
 
+[tool.flake8]
+max-line-length = 100
+exclude = ["build", "dist", ".venv"]
 
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-# Code formatting + linting tools (optional but recommended)
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ['py311']
 
 [tool.isort]
 profile = "black"
 
-[tool.ruff]
-select = ["E", "F", "I"]
-ignore = ["E501"]  # long lines allowed
+[tool.pytest.ini_options]
+testpaths = ["src/multimodal_agent/tests"]
+addopts = "--cov=multimodal_agent --cov-report=term-missing"
 
-[project.optional-dependencies]
-test = [
-  "pytest",
-  "pytest-mock",
-  "pytest-cov",
-]
-
-[tool.coverage.run]
-source = ["multimodal_agent"]
-branch = true
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true
-
-
+[build-system]
+requires = ["setuptools>=67.0", "wheel"]
+build-backend = "setuptools.build_meta"
