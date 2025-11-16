@@ -23,7 +23,11 @@ def mock_agent(mocker, mock_client_response):
     mock_client = mocker.Mock()
     agent = MultiModalAgent(client=mock_client)
 
-    mocker.patch.object(agent.client.models, "generate_content", return_value=mock_client_response)
+    mocker.patch.object(
+        agent.client.models,
+        "generate_content",
+        return_value=mock_client_response,
+    )
     return agent
 
 

@@ -52,7 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # agent image cats.jpg "describe this"
     image_parser = subparsers.add_parser("image", help="Ask with image + text")
-    image_parser.add_argument("image_path", type=str, help="Path to local image")
+    image_parser.add_argument(
+        "image_path",
+        type=str,
+        help="Path to local image",
+    )
     image_parser.add_argument("prompt", type=str, help="Your question")
 
     # agent chat.
@@ -92,7 +96,9 @@ def main():
             try:
                 image_as_part = load_image_as_part(args.image_path)
             except Exception:
-                raise InvalidImageError(f"Cannot read image: {args.image_path}")
+                raise InvalidImageError(
+                    f"Cannot read image: {args.image_path}",
+                )
             response = agent.ask_with_image(args.prompt, image_as_part)
             # chat output.
             print(response)

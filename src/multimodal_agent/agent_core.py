@@ -11,7 +11,12 @@ def is_retryable_error(exception):
 
 
 class MultiModalAgent:
-    def __init__(self, model="gemini-2.5-flash", api_version="v1", client=None):
+    def __init__(
+        self,
+        model="gemini-2.5-flash",
+        api_version="v1",
+        client=None,
+    ):
         self.logger = get_logger(__name__)
         self.logger.info("Initializing MultiModal agent...")
 
@@ -20,7 +25,9 @@ class MultiModalAgent:
         if client:
             self.client = client
         else:
-            self.client = genai.Client(http_options=HttpOptions(api_version=api_version))
+            self.client = genai.Client(
+                http_options=HttpOptions(api_version=api_version),
+            )
 
     # safe request execution with retries.
     def safe_generate_content(self, contents, max_retries=3, base_delay=1):
@@ -37,13 +44,16 @@ class MultiModalAgent:
             except Exception as exception:
                 if is_retryable_error(exception=exception):
                     wait = base_delay * (2 ** (attempt - 1))
-                    self.logger.warning(
-                        f"Warning: Model overloaded (attempt {attempt}/{max_retries}). Retrying in {wait}s..."
-                    )
+                    message = "(attempt {attempt}/{max_retries})."
+                    self.logger.warning(f"Warning: Model overloaded {message}")
+                    self.logger.warning(f" Retry in {wait}s...")
                     time.sleep(wait)
                     continue
 
-                self.logger.error("Non-retryable error occurred.", exc_info=True)
+                self.logger.error(
+                    "Non-retryable error occurred.",
+                    exc_info=True,
+                )
                 raise NonRetryableError(str(exception)) from exception
 
         self.logger.error("Model overloaded. Please try again later.")
@@ -60,7 +70,9 @@ class MultiModalAgent:
 
     # Chat mode.
     def chat(self):
-        self.logger.info("Welcome to the MultiModal Agent Chat! Type 'exit' to quit.")
+        self.logger.info(
+            "Welcome to the MultiModal Agent Chat! Type 'exit' to quit.",
+        )
         history = []
 
         while True:

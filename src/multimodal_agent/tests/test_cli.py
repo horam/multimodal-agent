@@ -30,12 +30,18 @@ def test_cli_ask(monkeypatch, capsys, mocker):
 
 # Test text and image question - image command.
 def test_cli_image(monkeypatch, capsys, mocker):
-    fake_agent = types.SimpleNamespace(ask_with_image=lambda prompt, img: f"IMAGE_ANSWER: {prompt}")
+    fake_agent = types.SimpleNamespace(
+        ask_with_image=lambda prompt, img: f"IMAGE_ANSWER: {prompt}",
+    )
 
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
     mocker.patch.object(cli, "load_image_as_part", return_value="FAKE_PART")
 
-    monkeypatch.setattr(system, "argv", ["agent", "image", "fake.jpg", "describe this"])
+    monkeypatch.setattr(
+        system,
+        "argv",
+        ["agent", "image", "fake.jpg", "describe this"],
+    )
 
     cli.main()
     out = capsys.readouterr().out.strip()
@@ -45,7 +51,11 @@ def test_cli_image(monkeypatch, capsys, mocker):
 
 # Test invalid image scenario.
 def test_cli_image_invalid(monkeypatch, caplog):
-    monkeypatch.setattr(system, "argv", ["agent", "image", "bad.jpg", "prompt"])
+    monkeypatch.setattr(
+        system,
+        "argv",
+        ["agent", "image", "bad.jpg", "prompt"],
+    )
 
     # force CLI logger to use caplog handler.
     logger = cli.logger

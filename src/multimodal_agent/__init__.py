@@ -1,4 +1,5 @@
 import os
+from .agent_core import MultiModalAgent
 
 PACKAGE_ROOT = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(PACKAGE_ROOT, "..", ".."))
@@ -11,6 +12,5 @@ except FileNotFoundError:
     # fallback for tests, editable installs, CI
     __version__ = "0.0.0"
 
-from .agent_core import MultiModalAgent
 
 __all__ = ["MultiModalAgent", "__version__"]

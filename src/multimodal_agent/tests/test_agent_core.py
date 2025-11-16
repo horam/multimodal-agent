@@ -1,4 +1,3 @@
-from multimodal_agent.agent_core import MultiModalAgent
 from multimodal_agent.utils import load_image_as_part
 
 
@@ -27,7 +26,11 @@ def test_chat_history_format(mock_agent, mocker):
     mocker.patch("builtins.input", side_effect=["hello", "exit"])
 
     # simulate generate_content returning deterministic text
-    mock_agent.safe_generate_content = lambda contents: type("R", (), {"text": "reply"})
+    mock_agent.safe_generate_content = lambda contents: type(
+        "R",
+        (),
+        {"text": "reply"},
+    )
 
     # running chat should not raise exceptions
     mock_agent.chat()
