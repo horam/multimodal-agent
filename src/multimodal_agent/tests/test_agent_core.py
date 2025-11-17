@@ -45,5 +45,4 @@ def test_chat_history_format(mock_agent, mocker):
         {"text": "reply"},
     )
 
-    # running chat should not raise exceptions
     mock_agent.chat()
