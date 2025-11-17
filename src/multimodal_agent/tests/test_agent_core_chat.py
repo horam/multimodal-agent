@@ -1,6 +1,5 @@
-import pytest
+
 from multimodal_agent.agent_core import MultiModalAgent
-from multimodal_agent.errors import AgentError
 
 
 def test_chat_error_path(monkeypatch, caplog):

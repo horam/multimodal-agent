@@ -104,7 +104,7 @@ class MultiModalAgent:
             except AgentError as exception:
                 self.logger.error(f"Agent failed: {exception}")
                 continue
-             # Catch raw exceptions
+            # Catch raw exceptions
             except Exception as exception:
                 self.logger.error(f"Chat error: {exception}")
                 continue
