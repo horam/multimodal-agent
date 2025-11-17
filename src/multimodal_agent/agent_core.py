@@ -100,8 +100,13 @@ class MultiModalAgent:
             contents = history + [user_input]
             try:
                 response = self.safe_generate_content(contents)
+            # Catch agent exceptions
             except AgentError as exception:
                 self.logger.error(f"Agent failed: {exception}")
+                continue
+             # Catch raw exceptions
+            except Exception as exception:
+                self.logger.error(f"Chat error: {exception}")
                 continue
 
             answer = response.text

@@ -1,30 +1,31 @@
-from multimodal_agent.agent_core import AgentError, MultiModalAgent
+import pytest
+from multimodal_agent.agent_core import MultiModalAgent
+from multimodal_agent.errors import AgentError
 
 
 def test_chat_error_path(monkeypatch, caplog):
     agent = MultiModalAgent(client=None)
 
-    # force generate to always raise AgentError
-    def bad_generate(*args, **kwargs):
-        raise AgentError("chat failure")
-
+    # Dummy client throwing raw exception from generate_content
     class DummyClient:
         class models:
-            generate_content = bad_generate
+            @staticmethod
+            def generate_content(*a, **k):
+                raise Exception("chat failure")
 
     agent.client = DummyClient()
 
-    # Patch the logger so caplog sees its output
+    # Patch logger for caplog.
     agent.logger.handlers = [caplog.handler]
     agent.logger.setLevel("ERROR")
 
-    monkeypatch.setattr(
-        agent.client.models,
-        "generate_content",
-        lambda *a, **k: (_ for _ in ()).throw(Exception("chat failure")),
-    )
+    # Patch `input()` so chat loop gets "hello" and "exit".
+    inputs = iter(["hello", "exit"])
+    monkeypatch.setattr("builtins.input", lambda *_: next(inputs))
 
     with caplog.at_level("ERROR"):
         agent.chat()
 
-    assert "chat failure" in caplog.text
+    # Validate that error was logged
+    messages = " ".join(caplog.messages)
+    assert "chat failure" in messages
