@@ -1,4 +1,5 @@
 import time
+import os
 from google import genai
 from google.genai.types import HttpOptions, Part
 from .logger import get_logger
@@ -22,12 +23,25 @@ class MultiModalAgent:
 
         self.model = model
 
-        if client:
+        if client is not None:
             self.client = client
         else:
-            self.client = genai.Client(
-                http_options=HttpOptions(api_version=api_version),
-            )
+            api_key = os.getenv("GOOGLE_API_KEY")
+            if not api_key:
+                # In CI or local without key, use dummy client
+                class DummyClient:
+                    class models:
+                        @staticmethod
+                        def generate_content(*a, **k):
+                            raise RuntimeError(
+                                "Real model not available (no API key).",
+                            )
+
+                self.client = DummyClient()
+            else:
+                self.client = genai.Client(
+                    http_options=HttpOptions(api_version=api_version),
+                )
 
     # safe request execution with retries.
     def safe_generate_content(self, contents, max_retries=3, base_delay=1):
