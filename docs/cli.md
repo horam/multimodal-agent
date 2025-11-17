@@ -2,27 +2,27 @@
 
 The package installs a command-line tool called: agent
 
-## Commands
+## Commands Overview
 
-### Ask a text question
-
-```bash
-agent ask "What is quantum entanglement?"
-```
-
-### Describe an image
-```bash
-agent image photo.jpg "what is in this photo?"
-```
-### Start chat session
-```bash
-agent chat
-```
 ### Show version
 ```bash
 agent --version
 ```
-### Enable debug logs
+### Text Prompt
+```bash
+agent ask "hello world"
+```
+### Image + Text
+```bash
+agent image img.jpg "describe this"
+```
+### Debug Mode
 ```bash
 agent --debug ask "hello"
+```
+## Example Response
+
+```bash
+$ agent ask "what is python?"
+Python is a programming language...
 ```

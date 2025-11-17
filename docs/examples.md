@@ -11,4 +11,13 @@ print(agent.ask("hello"))
 ```python
 agent --model gemini-pro ask "explain transformers"
 ```
+### Error handling example
+```python
+from multimodal_agent.errors import AgentError
+
+try:
+    agent.ask("hello")
+except AgentError as e:
+    print("Request failed:", e)
+```
 

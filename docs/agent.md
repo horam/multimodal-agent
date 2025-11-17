@@ -1,37 +1,35 @@
 # The Agent Class
 
-```yaml
-multimodal_agent.agent_core.MultiModalAgent
+The main class powering multimodal communication with Gemini.
+
+## Initialization
+
+```python
+from multimodal_agent.agent_core import MultiModalAgent
+
+agent = MultiModalAgent(model="gemini-2.5-flash")
 ```
+---
+## Methods
 
-## Commands
+### ask(prompt: str) -> str
+Send a text-only request.
 
-### Ask a text question
 
-```bash
-agent ask "What is quantum entanglement?"
-```
+### ask_with_image(prompt: str, image: Part) -> str
+Send an image + prompt.
 
-### Describe an image
+### chat()
+Interactive REPL loop.
 
-```bash
-agent image photo.jpg "what is in this photo?"
-```
 
-### Start chat session
+## Retry Logic
+All requests go through:
 
-```bash
-agent chat
-```
+    safe_generate_content()
 
-### Show version
+* exponential backoff
 
-```bash
-agent --version
-```
+* retryable vs non-retryable errors
 
-### Enable debug logs
-
-```bash
-agent --debug ask "hello"
-```
+* structured custom exceptions
