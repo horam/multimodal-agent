@@ -1,15 +1,15 @@
 import argparse
-import sys as system
 import os
+import sys as system
 
 from dotenv import load_dotenv
 
+from multimodal_agent import __version__
 from multimodal_agent.agent_core import MultiModalAgent
 from multimodal_agent.utils import load_image_as_part
-from .errors import AgentError, InvalidImageError
-from multimodal_agent import __version__
-from .logger import get_logger
 
+from .errors import AgentError, InvalidImageError
+from .logger import get_logger
 
 # Load .env from the project root
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

@@ -1,9 +1,10 @@
-import requests
 from pathlib import Path
-from google.genai.types import Part, Blob
-from multimodal_agent.errors import InvalidImageError
 
+import requests
+from google.genai.types import Blob, Part
 from PIL import Image
+
+from multimodal_agent.errors import InvalidImageError
 
 
 def load_image_as_part(path: str) -> Part:

@@ -1,4 +1,5 @@
 import os
+
 from .agent_core import MultiModalAgent
 
 PACKAGE_ROOT = os.path.dirname(__file__)

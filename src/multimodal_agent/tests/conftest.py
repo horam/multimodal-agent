@@ -1,4 +1,5 @@
 import pytest
+
 from multimodal_agent.agent_core import MultiModalAgent
 
 
