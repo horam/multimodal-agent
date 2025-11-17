@@ -22,3 +22,11 @@ publish-test:
 
 publish:
 	twine upload dist/*
+
+release:
+	python -m build
+	twine upload dist/*
+tag:
+	git tag v$(shell cat VERSION)
+	git push origin v$(shell cat VERSION)
+
