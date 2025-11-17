@@ -1,25 +1,38 @@
 import requests
-from google.genai.types import Part
+from pathlib import Path
+from google.genai.types import Part, Blob
 from multimodal_agent.errors import InvalidImageError
 
+from PIL import Image
 
-def load_image_as_part(path: str, mime_type="image/jpeg") -> Part:
+
+def load_image_as_part(path: str) -> Part:
     """
     Load a local image file into a Part object.
     """
 
+    p = Path(path)
+
+    if not p.exists():
+        raise InvalidImageError(f"Image not found: {path}")
+
+    # guess mime
+    ext = p.suffix.lower()
+    if ext in (".jpg", ".jpeg"):
+        mime = "image/jpeg"
+    elif ext == ".png":
+        mime = "image/png"
+    else:
+        raise InvalidImageError(f"Unsupported image format: {ext}")
+
     try:
-        with open(path, "rb") as f:
-            image_bytes = f.read()
-    except Exception as exception:
-        raise InvalidImageError(f"Failed to load image: {path}") from exception
+        with Image.open(p) as img:
+            data = img.tobytes()
+    except Exception:
+        # important: fail loudly
+        raise InvalidImageError(f"Cannot decode image: {path}")
 
-    image_part = Part.from_bytes(
-        data=image_bytes,
-        mime_type=mime_type,
-    )
-
-    return image_part
+    return Part(inline_data=Blob(data=data, mime_type=mime))
 
 
 def load_image_from_url_as_part(url: str, mime_type="image/jpeg") -> Part:

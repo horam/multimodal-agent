@@ -6,43 +6,47 @@ authors = [
     { name = "Horam", email = "horam.tech@google.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 
+# Runtime dependencies
 dependencies = [
     "google-genai>=1.4.0",
     "python-dotenv>=1.0.0",
-    "requests>=2.31.0"
+    "requests>=2.31.0",
+    "Pillow>=10.0.0",       
 ]
 
-# OPTIONAL dependencies for development
 [project.optional-dependencies]
+# only testing dependencies
 test = [
-    "pytest",
-    "pytest-mock",
-    "pytest-cov",
+    "pytest>=7.4",
+    "pytest-mock>=3.12",
+    "pytest-cov>=4.1"
 ]
+
+# development extras include testing + lint/format/docs
 dev = [
-    "black",
-    "flake8",
-    "isort",
-    "pytest",
-    "pytest-mock",
-    "pytest-cov",
-    "mkdocs",
-    "mkdocs-material",
+    "pytest>=7.4",
+    "pytest-mock>=3.12",
+    "pytest-cov>=4.1",
+    "black>=24.0",
+    "flake8>=7.0",
+    "isort>=5.13",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
 ]
 
 [project.scripts]
 agent = "multimodal_agent.cli:main"
 
-[tool.flake8]
-max-line-length = 100
-exclude = ["build", "dist", ".venv"]
-
 [tool.black]
 line-length = 100
 target-version = ['py311']
+
+[tool.flake8]
+max-line-length = 100
+exclude = ["build", "dist", ".venv"]
 
 [tool.isort]
 profile = "black"
