@@ -20,7 +20,11 @@ def test_chat_error_path(monkeypatch, caplog):
 
     # simulate user typing 'hello' then 'exit'
     inputs = ["hello", "exit"]
-    monkeypatch.setattr(agent.client.models, "generate_content", lambda *a, **k: (_ for _ in ()).throw(Exception("chat failure")))
+    monkeypatch.setattr(
+        agent.client.models,
+        "generate_content",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("chat failure")),
+    )
 
     with caplog.at_level("ERROR"):
         agent.chat()
