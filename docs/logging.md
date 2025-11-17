@@ -1,17 +1,27 @@
 # Logging
 
-The project uses a custom logger:
+The package uses a unified logging utility:
 
 ```python
 from multimodal_agent.logger import get_logger
+logger = get_logger(__name__)
 ```
-It supports:
+---
+### Features
 
-* consistent formatting
+- Consistent formatting
+- Output to stdout
+- Prevents duplicate handlers
+- Respects LOGLEVEL environment variable
+- Works with pytest caplog
+---
+### Changing Log Level
+In .env:
 
-* LOGLEVEL override via environment
+    LOGLEVEL=DEBUG
 
-* stdout handler
+Or via CLI:
 
-* works with pytest caplog
-
+```bash
+agent --debug ask "hello"
+```
