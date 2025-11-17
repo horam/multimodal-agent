@@ -2,37 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
-  lint-test:
+  build-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install black flake8
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e ".[dev,test]"
 
-      - name: Run black (check)
-        run: black --check .
+    - name: Black formatting
+      run: black --check .
 
-      - name: Run flake8
-        run: flake8 src
+    - name: Flake8 static analysis
+      run: flake8 .
 
-      - name: Run tests with coverage
-        run: |
-          pytest --cov=multimodal_agent --cov-report=term-missing
+    - name: Check isort
+      run: isort . --check-only --profile black
+
+    - name: Run tests
+      run: pytest --cov=multimodal_agent --cov-report=term-missing
+
+    - name: Enforce coverage threshold
+      run: |
+        coverage report --fail-under=85
