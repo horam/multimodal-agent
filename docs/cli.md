@@ -1,6 +1,7 @@
 # CLI Usage
 
-The package installs a command-line tool called: agent
+The project installs an executable named:
+`agent`
 
 ## Commands Overview
 
@@ -8,21 +9,29 @@ The package installs a command-line tool called: agent
 ```bash
 agent --version
 ```
-### Text Prompt
+### Ask a Text Question
 ```bash
-agent ask "hello world"
+agent ask "Explain quantum entanglement.
 ```
-### Image + Text
+### Describe an Image
 ```bash
-agent image img.jpg "describe this"
+agent image photo.jpg "what is in this image?"
+```
+### Chat Mode
+``` bash
+agent chat
 ```
 ### Debug Mode
 ```bash
 agent --debug ask "hello"
 ```
-## Example Response
-
+### Change Model
 ```bash
-$ agent ask "what is python?"
-Python is a programming language...
+agent --model gemini-pro ask "explain transformers"
 ```
+### Help
+``` bash
+agent --help
+```
+Shows all subcommands and usage examples.
+
