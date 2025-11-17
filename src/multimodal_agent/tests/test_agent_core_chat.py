@@ -1,4 +1,4 @@
-from multimodal_agent.agent_core import MultiModalAgent, AgentError
+from multimodal_agent.agent_core import AgentError, MultiModalAgent
 
 
 def test_chat_error_path(monkeypatch, caplog):
@@ -18,8 +18,6 @@ def test_chat_error_path(monkeypatch, caplog):
     agent.logger.handlers = [caplog.handler]
     agent.logger.setLevel("ERROR")
 
-    # simulate user typing 'hello' then 'exit'
-    inputs = ["hello", "exit"]
     monkeypatch.setattr(
         agent.client.models,
         "generate_content",

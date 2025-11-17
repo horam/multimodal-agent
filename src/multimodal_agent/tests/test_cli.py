@@ -1,9 +1,10 @@
 import sys as system
 import types
 from unittest.mock import MagicMock
+
 import pytest
 
-from multimodal_agent import cli, __version__
+from multimodal_agent import __version__, cli
 
 
 @pytest.fixture(autouse=True)
