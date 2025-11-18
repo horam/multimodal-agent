@@ -12,16 +12,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install MkDocs and plugins
         run: |
-          pip install mkdocs mkdocs-material
+          pip install mkdocs
+          pip install mkdocs-material
+          pip install mkdocstrings[python]
+
+      # Optional: install your package for API docs auto-detection
+      - name: Install package
+        run: pip install -e .[dev] || true
 
       - name: Build and deploy docs
         run: mkdocs gh-deploy --force
