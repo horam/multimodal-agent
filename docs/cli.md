@@ -17,7 +17,7 @@ agent ask "Explain quantum entanglement.
 ```bash
 agent image photo.jpg "what is in this image?"
 ```
-### Chat Mode
+### Chat Mode (with memory)
 ``` bash
 agent chat
 ```
@@ -35,3 +35,23 @@ agent --help
 ```
 Shows all subcommands and usage examples.
 
+## Memory Commands
+### Show history
+```bash
+agent history show
+```
+### Delete one entry
+
+```bash
+agent history delete 2
+```
+
+### Reset history
+```bash
+agent history reset
+```
+
+### Summarize conversation
+```bash
+agent history summary
+```

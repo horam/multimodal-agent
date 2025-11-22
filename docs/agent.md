@@ -35,7 +35,7 @@ image = load_image_as_part("photo.jpg")
 agent.ask_with_image("Describe this image.", image)
 ```
 ### `chat()`
-Starts a REPL (interactive loop).
+Starts a REPL (interactive loop) with memory persistence.
 
 ```bash
 agent chat

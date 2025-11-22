@@ -6,13 +6,26 @@ This library provides:
 
 - Text generation  
 - Image + text multimodal prompts  
-- Interactive chat mode  
+- Interactive chat mode 
+- Local conversation memory 
 - Retry logic with exponential backoff  
 - Custom exceptions for safe error handling  
 - Structured CLI (`agent`)  
 - Full logging utilities  
 - 85%+ test coverage  
 - PyPI-ready project structure  
+
+---
+
+
+## What’s New (v0.2.0)
+
+- **Local memory system**  
+- `agent history show | delete | reset | summary`
+- Improved chat mode error handling  
+- More modular CLI  
+- Updated tests & fixtures  
+- Cleaner logging for CLI mode  
 
 ---
 
