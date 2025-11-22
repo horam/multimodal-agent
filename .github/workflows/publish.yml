@@ -9,6 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read  # prevents OIDC/Trusted Publishing from being attempted
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
