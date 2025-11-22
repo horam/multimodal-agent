@@ -4,6 +4,7 @@ import sys as system
 
 from dotenv import load_dotenv
 
+import multimodal_agent.utils as utils
 from multimodal_agent import __version__
 from multimodal_agent.agent_core import MultiModalAgent
 from multimodal_agent.utils import load_image_as_part
@@ -62,6 +63,22 @@ def build_parser() -> argparse.ArgumentParser:
     # agent chat.
     subparsers.add_parser("chat", help="Start interactive chat mode")
 
+    # history parser
+    history_parser = subparsers.add_parser(
+        "history",
+        help="Manage chat history",
+    )
+    history_sub = history_parser.add_subparsers(dest="history_cmd")
+
+    history_sub.add_parser("show", help="Show saved memory entries")
+    history_sub.add_parser("summary", help="Summarize conversation history")
+    delete_command = history_sub.add_parser(
+        "delete",
+        help="Delete a specific memory index",
+    )
+    delete_command.add_argument("index", type=int, help="Index to delete")
+    history_sub.add_parser("reset", help="Clear all memory")
+
     return parser
 
 
@@ -107,6 +124,46 @@ def main():
         elif args.command == "chat":
             agent.chat()
             return
+
+        # history mode.
+        elif args.command == "history":
+            if args.history_cmd == "show":
+                memory = utils.load_memory()
+                if not memory:
+                    print("No history found.")
+
+                else:
+                    for index, line in enumerate(memory):
+                        print(f"{index}: {line}")
+                return
+            if args.history_cmd == "delete":
+                index = args.index
+                isDeleted = utils.delete_memory_index(index)
+                if isDeleted:
+                    print(f"Deleted memory entry {index}")
+                else:
+                    print(f"Invalid index: {index}")
+                return
+
+            if args.history_cmd == "reset":
+                utils.reset_memory()
+                print("Memory cleared")
+                return
+            if args.history_cmd == "summary":
+                memory = utils.load_memory()
+                if not memory:
+                    print("No history to summarize.")
+                    return
+
+                prompt = [
+                    "Summarize this conversation history:",
+                    "\n".join(memory),
+                ]
+
+                agent = MultiModalAgent(model=args.model)
+                response = agent.safe_generate_content(prompt)
+                print(response.text)
+                return
 
     except AgentError as exception:
         logger.error(f"Agent failed: {exception}")

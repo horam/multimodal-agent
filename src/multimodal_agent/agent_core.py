@@ -4,6 +4,8 @@ import time
 from google import genai
 from google.genai.types import HttpOptions, Part
 
+import multimodal_agent.utils as utils
+
 from .errors import AgentError, NonRetryableError, RetryableError
 from .logger import get_logger
 
@@ -89,7 +91,6 @@ class MultiModalAgent:
         self.logger.info(
             "Welcome to the MultiModal Agent Chat! Type 'exit' to quit.",
         )
-        history = []
 
         while True:
             user_input = input("You: ")
@@ -97,9 +98,9 @@ class MultiModalAgent:
                 self.logger.info("Chat session ended. Goodbye!")
                 break
             # Create conversation history.
-            contents = history + [user_input]
+            utils.append_memory(f"USER: {user_input}")
             try:
-                response = self.safe_generate_content(contents)
+                response = self.safe_generate_content(user_input)
             # Catch agent exceptions
             except AgentError as exception:
                 self.logger.error(f"Agent failed: {exception}")
@@ -111,7 +112,5 @@ class MultiModalAgent:
 
             answer = response.text
             self.logger.info(f"Agent: {answer}")
-
-            # update chat history
-            history.append(user_input)
-            history.append(answer)
+            # store reply.
+            utils.append_memory(f"AGENT: {answer}")
