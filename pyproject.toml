@@ -53,6 +53,9 @@ profile = "black"
 testpaths = ["src/multimodal_agent/tests"]
 addopts = ""
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [build-system]
 requires = ["setuptools>=67.0", "wheel"]
 build-backend = "setuptools.build_meta"
