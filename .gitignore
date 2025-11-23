@@ -16,7 +16,6 @@ venv/
 # Distribution / packaging
 build/
 dist/
-*.egg-info/
 
 # VSCode / editors
 .vscode/
