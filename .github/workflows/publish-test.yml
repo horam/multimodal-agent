@@ -12,9 +12,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: repo
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: repo
 
       - name: Print debug info
         run: |
@@ -24,18 +30,11 @@ jobs:
           ls -la src || true
           echo "==== top-level pyproject ===="
           cat pyproject.toml || echo "NO pyproject.toml FOUND"
-          
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
-      - name: Clean previous builds
-        run: |
-          echo "Cleaning dist/build in $(pwd)"
-          ls -la
-          rm -rf ./dist ./build ./*.egg-info
-          ls -la
 
       - name: Install build deps
         run: |
@@ -47,12 +46,7 @@ jobs:
           echo "Building package..."
           python -m build
           echo "Build finished."
-
-      - name: Debug dist contents
-        run: |
-          echo "Checking dist contents:"
-          ls -R dist || echo "dist missing!"
-
+          
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
