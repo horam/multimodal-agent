@@ -7,9 +7,6 @@ permissions:
   id-token: write
   contents: read
 
-defaults:
-  run:
-    working-directory: multimodal-agent
 
 jobs:
   build:
@@ -21,10 +18,13 @@ jobs:
 
       - name: Print debug info
         run: |
-          pwd
+          echo "PWD: $(pwd)"
           ls -la .
-          cat pyproject.toml || echo "NO PYPROJECT FOUND"
-
+          echo "==== src ===="
+          ls -la src || true
+          echo "==== top-level pyproject ===="
+          cat pyproject.toml || echo "NO pyproject.toml FOUND"
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
