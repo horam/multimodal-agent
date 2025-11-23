@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 
 dependencies = [
     "google-genai>=1.45.0",
@@ -56,10 +56,6 @@ addopts = ""
 [build-system]
 requires = ["setuptools>=67.0", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools.metadata]
-name = "multimodal-agent"
-version = "0.2.5"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
