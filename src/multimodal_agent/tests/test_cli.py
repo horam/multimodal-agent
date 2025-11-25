@@ -24,15 +24,11 @@ def test_cli_version(monkeypatch, capsys):
     monkeypatch.setattr(system, "argv", ["agent", "--version"])
     cli.main()
     captured = capsys.readouterr().out.strip()
-
     assert f"multimodal-agent version {__version__}" in captured
 
 
-# Test text question - ask command
 def test_cli_ask(monkeypatch, capsys, mocker):
     fake_agent = types.SimpleNamespace(ask=lambda prompt: f"ANSWER: {prompt}")
-
-    # Patch agent creation
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
 
     monkeypatch.setattr(system, "argv", ["agent", "ask", "hello"])
@@ -47,7 +43,6 @@ def test_cli_image(monkeypatch, capsys, mocker):
     fake_agent = types.SimpleNamespace(
         ask_with_image=lambda prompt, img: f"IMAGE_ANSWER: {prompt}",
     )
-
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
     mocker.patch.object(cli, "load_image_as_part", return_value="FAKE_PART")
 
@@ -56,34 +51,31 @@ def test_cli_image(monkeypatch, capsys, mocker):
         "argv",
         ["agent", "image", "fake.jpg", "describe this"],
     )
-
     cli.main()
     out = capsys.readouterr().out.strip()
-
     assert "IMAGE_ANSWER: describe this" in out
 
 
 # Test invalid image.
 def test_cli_image_invalid(monkeypatch, caplog, mocker):
-    # Simulate: agent image bad.jpg "prompt"
     monkeypatch.setattr(
         system,
         "argv",
         ["agent", "image", "bad.jpg", "prompt"],
     )
 
-    # 1) Don't let MultiModalAgent hit the real Google client
+    # Do not let MultiModalAgent hit the real Google client
     fake_agent = mocker.Mock()
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
+    # Force image loader to fail so we trigger InvalidImageError
 
-    # 2) Force image loader to fail so we trigger InvalidImageError
     mocker.patch.object(
         cli,
         "load_image_as_part",
         side_effect=Exception("boom"),
     )
 
-    # 3) Route CLI logger into caplog's handler so we can assert on log output
+    # Route CLI logger into caplog's handler so we can assert on log output
     logger = cli.logger
     logger.handlers = [caplog.handler]
     logger.setLevel("ERROR")
@@ -105,19 +97,37 @@ def test_cli_image_invalid(monkeypatch, caplog, mocker):
 
 # Test chat command.
 def test_cli_chat(monkeypatch, mocker):
-    fake_agent = types.SimpleNamespace(chat=lambda: None)
+    # New chat signature accepts session_id
+    fake_agent = types.SimpleNamespace(chat=lambda session_id="default": None)
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
 
     monkeypatch.setattr(system, "argv", ["agent", "chat"])
-
     cli.main()  # should run without exception
 
 
-# Test print_help() scenario.
 def test_cli_no_command(monkeypatch, capsys):
     monkeypatch.setattr(system, "argv", ["agent"])
-
     cli.main()
     out = capsys.readouterr().out
-
     assert "usage:" in out.lower()
+
+
+def test_cli_version_flag(capsys):
+    parser = cli.build_parser()
+    args = parser.parse_args(["--version"])
+    assert args.version is True
+
+
+def test_cli_ask_parser():
+    parser = cli.build_parser()
+    args = parser.parse_args(["ask", "hello"])
+    assert args.command == "ask"
+    assert args.prompt == "hello"
+    assert args.no_rag is False
+
+
+def test_cli_history_show_parser():
+    parser = cli.build_parser()
+    args = parser.parse_args(["history", "show"])
+    assert args.command == "history"
+    assert args.history_cmd == "show"

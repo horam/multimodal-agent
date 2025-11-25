@@ -1,6 +1,8 @@
 import pytest
 
+import multimodal_agent.rag_store as rag_mod
 from multimodal_agent.agent_core import MultiModalAgent
+from multimodal_agent.rag_store import RAGStore
 
 
 @pytest.fixture
@@ -39,3 +41,39 @@ def fake_part():
         mime_type = "image/jpeg"
 
     return FakePart()
+
+
+@pytest.fixture(autouse=True)
+def no_real_rag(monkeypatch, request):
+    """
+    Disable SQLiteRAGStore for tests that are not testing the real DB.
+    """
+    if "use_real_rag" in getattr(request, "keywords", {}):
+        return  # let RAG tests hit real SQLite
+
+    class DummyStore(RAGStore):
+        def __init__(self, *a, **k):
+            pass
+
+        def add_chunk(self, *a, **k):
+            return 1
+
+        def add_embedding(self, *a, **k):
+            return None
+
+        def get_recent_chunks(self, *a, **k):
+            return []
+
+        def get_recent_chunk(self, *a, **k):
+            return []
+
+        def search_similar(self, *a, **k):
+            return []
+
+        def delete_chunk(self, *a, **k):
+            return None
+
+        def clear_all(self):
+            return None
+
+    monkeypatch.setattr(rag_mod, "SQLiteRAGStore", DummyStore)

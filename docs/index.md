@@ -1,89 +1,88 @@
 # Multimodal Agent
 
-A clean, modern multimodal AI agent powered by **Google Gemini**, built by **Horam**.
+A lightweight, production-ready wrapper around **Google Gemini** with:
 
-This library provides:
+- Multimodal support (text + images)
+- Session-based conversational memory
+- SQLite-powered RAG vector store
+- High test coverage (90%+)
+- Robust CLI (`agent`)
+- Retry logic + error handling
+- Extensible architecture for plugins & tooling
 
-- Text generation  
-- Image + text multimodal prompts  
-- Interactive chat mode 
-- Local conversation memory 
-- Retry logic with exponential backoff  
-- Custom exceptions for safe error handling  
-- Structured CLI (`agent`)  
-- Full logging utilities  
-- 85%+ test coverage  
-- PyPI-ready project structure  
-
----
+This documentation will guide you through:
 
 
-## What’s New (v0.2.0)
 
-- **Local memory system**  
-- `agent history show | delete | reset | summary`
-- Improved chat mode error handling  
-- More modular CLI  
-- Updated tests & fixtures  
-- Cleaner logging for CLI mode  
+## Contents
 
----
-
-## Why this project exists
-
-The official Gemini examples are minimal. This package demonstrates how to build a **production-quality, testable, extensible** AI agent with:
-
-- Proper package architecture  
-- Retry + failure handling  
-- Custom exceptions  
-- CLI tooling  
-- Strong test coverage  
-- Professional project layout  
-
----
-
-## Documentation
-
+### Getting Started  
 - [Installation](installation.md)  
-- [Quickstart](quickstart.md)  
 - [CLI Usage](cli.md)  
-- [Agent API](agent.md)  
-- [Error Handling](errors.md)  
-- [Logging](logging.md)  
-- [Examples](examples.md)  
+- [Python API](python_api.md)
 
----
+### Core System  
+- [Architecture Overview](architecture.md)  
+- [Sessions](sessions.md)  
+- [RAG Memory](rag.md)  
+- [History Management](history.md)
 
-## Project Structure
+### Advanced Features  
+- [Response Metadata Schema](metadata_schema.md)  
+- [Token Usage Logging](token_usage.md)  
+- [Chunk Normalization (Planned)](chunk_normalization.md)
 
-```text
-multimodal_agent/
-├── agent_core.py
-├── cli.py
-├── utils.py
-├── logger.py
-├── errors.py
-└── tests/
+### Development  
+- Project structure  
+- Running tests  
+- Coverage reports  
+- Contributing
+
+
+## Version Highlights (v0.2.6)
+
+- Added SQLite-backed RAG store  
+- Added session-based memory  
+- Added `agent history` commands  
+- Updated schema for future usage  
+- New docs for RAG and session management  
+
+
+## Why This Project Exists
+
+This agent sits between **Gemini** and your applications to provide:
+
+- A clean interface  
+- Safer, predictable behavior  
+- Local memory without external services  
+- Debuggable pipelines  
+
+
+
+## 🚀 Quick Start
+
+Install:
+
+```bash
+pip install multimodal-agent
+```
+Ask a question:
+```bash
+agent ask "What is recursion?"
 ```
 
----
-## Features at a Glance
+Start a chat session:
+```bash
+agent chat --session my_chat
+```
+
+Enable verbose metadata:
+```bash
+agent ask "hello" --verbose
+```
 
 
-✔ Gemini API wrapper
+## Need help?
 
-✔ Multimodal (text + image)
-
-✔ Retry with exponential backoff
-
-✔ Model overload protection
-
-✔ Custom image loader with MIME detection
-
-✔ CLI tool (agent)
-
-✔ Custom structured logs
-
-✔ Fully tested (85%+)
-
-✔ PyPI-ready packaging
+Open an issue on GitHub or submit a pull request.  
+PRs improving docs, tests, or performance are always welcome.
