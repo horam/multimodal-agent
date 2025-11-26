@@ -1,8 +1,10 @@
 import pytest
 
 from multimodal_agent.errors import InvalidImageError
-from multimodal_agent.utils import load_image_as_part
-from multimodal_agent.utils import load_image_from_url_as_part
+from multimodal_agent.utils import (  # noqa
+    load_image_as_part,
+    load_image_from_url_as_part,
+)
 
 
 def test_load_image_as_part_valid_png(tmp_path, monkeypatch):

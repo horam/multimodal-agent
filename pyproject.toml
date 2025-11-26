@@ -1,6 +1,6 @@
 [project]
 name = "multimodal-agent"
-version = "0.2.6"
+version = "0.2.7"
 description = "A Python multimodal agent for interacting with Gemini models via text, images, and CLI."
 authors = [
     { name = "Horam", email = "horam.tech@google.com" }

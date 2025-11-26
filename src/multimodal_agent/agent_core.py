@@ -110,12 +110,13 @@ class MultiModalAgent:
         """
         #  store session id
         session_id = self._ensure_session_id(session_id)
+
         if self.enable_rag and self.rag_store is not None:
             # store question as a chunk
-            question_chunk_id = self.rag_store.add_chunk(
+            question_chunk_ids = self.rag_store.add_logical_message(
                 content=question,
                 role="user",
-                session_id=session_id,
+                session_id=None,
                 source="ask",
             )
             # embed question
@@ -125,11 +126,12 @@ class MultiModalAgent:
             )
 
             # store embedding
-            self.rag_store.add_embedding(
-                chunk_id=question_chunk_id,
-                embedding=question_embedding,
-                model=self.embedding_model,
-            )
+            for chunk_id in question_chunk_ids:
+                self.rag_store.add_embedding(
+                    chunk_id=chunk_id,
+                    embedding=question_embedding,
+                    model=self.embedding_model,
+                )
 
             # retrieve similar content
             similar = self.rag_store.search_similar(
@@ -157,13 +159,13 @@ class MultiModalAgent:
         else:
             contents = [question]
 
-        # call model
+        # call model and generate answer
         response = self.safe_generate_content(contents)
         answer = response.text
 
         # store agent reply
         if self.enable_rag and self.rag_store is not None:
-            reply_chunk_id = self.rag_store.add_chunk(
+            reply_chunk_ids = self.rag_store.add_logical_message(
                 content=answer,
                 role="agent",
                 session_id=session_id,
@@ -172,12 +174,13 @@ class MultiModalAgent:
             # embed reply too so future questions can reference it
             try:
                 reply_emb = embed_text(answer, model=self.embedding_model)
+                for chunk_id in reply_chunk_ids:
+                    self.rag_store.add_embedding(
+                        chunk_id=chunk_id,
+                        embedding=reply_emb,
+                        model=self.embedding_model,
+                    )
 
-                self.rag_store.add_embedding(
-                    chunk_id=reply_chunk_id,
-                    embedding=reply_emb,
-                    model=self.embedding_model,
-                )
             except Exception:
                 # Do not crash the CLI if embedding of reply fails
                 pass
@@ -198,21 +201,28 @@ class MultiModalAgent:
     def chat(
         self,
         session_id: Optional[str] = None,
-        max_session_history: int = 20,
+        enable_rag: Optional[bool] = None,
         rag_top_k: int = 5,
     ) -> str:
         """
         Stateful chat with session-aware memory + RAG.
 
-        - session history (last N messages in this session)
-        → conversational context
-        - cross-session RAG (similar chunks from whole DB) → long-term memory
+        Steps:
+        - Store user messages (chunked)
+        - Embed user messages
+        - Retrieve similar chunks
+        - Generate response
+        - Store + embed assistant responses
         """
 
+        if enable_rag is None:
+            enable_rag = self.enable_rag
+
+        # Ensure having a session id.
         session_id = self._ensure_session_id(session_id=session_id)
 
         self.logger.info(
-            "Welcome to the MultiModal Agent Chat. Starting chat session"
+            "Entering chat mode. Starting chat session"
             f"'{session_id}'. Type 'exit' to quit.",
         )
 
@@ -224,9 +234,9 @@ class MultiModalAgent:
                 self.logger.info("Chat ended. Goodbye!")
                 break
 
-            try:
+            if enable_rag and self.rag_store is not None:
                 # store user message as chunk
-                user_message_chunk_id = self.rag_store.add_chunk(
+                user_message_chunk_ids = self.rag_store.add_logical_message(
                     content=user_input,
                     role="user",
                     session_id=session_id,
@@ -234,7 +244,7 @@ class MultiModalAgent:
                 )
 
                 # embed user message
-                if self.enable_rag:
+                try:
                     # return embedding vector
                     question_embedding = embed_text(
                         user_input,
@@ -242,39 +252,22 @@ class MultiModalAgent:
                     )
 
                     # add embedding to the store
-                    self.rag_store.add_embedding(
-                        chunk_id=user_message_chunk_id,
-                        embedding=question_embedding,
-                        model=self.embedding_model,
-                    )
-                    # Retrieve RAG context from history.
-                    similar = self.rag_store.search_similar(
-                        query_embedding=question_embedding,
-                        model=self.embedding_model,
-                        top_k=rag_top_k,
-                    )
-                    rag_context = [chunk.content for score, chunk in similar]
-                else:
-                    rag_context = []
+                    for chunk_id in user_message_chunk_ids:
+                        self.rag_store.add_embedding(
+                            chunk_id=chunk_id,
+                            embedding=question_embedding,
+                            model=self.embedding_model,
+                        )
+                except Exception:
+                    pass
 
-                # build session conversation history.
-                all_chunks = self.rag_store.get_recent_chunks(limit=200)
-                # Filter session chunks
-                session_chunks = [
-                    c for c in all_chunks if c.session_id == session_id
-                ]  # noqa: E501
-
-                session_chunks = list(reversed(session_chunks))[
-                    -max_session_history:
-                ]  # noqa: E501
-
-                history_lines = []
-
-                for chunk in session_chunks:
-                    speaker = "User" if chunk.role == "user" else "Assistant"
-                    history_lines.append(f"{speaker}: {chunk.content}")
-
-                history_block = "\n".join(history_lines)
+                # Retrieve RAG context from history.
+                similar = self.rag_store.search_similar(
+                    query_embedding=question_embedding,
+                    model=self.embedding_model,
+                    top_k=rag_top_k,
+                )
+                rag_context = [chunk.content for score, chunk in similar]
 
                 # Build final prompt
 
@@ -282,25 +275,39 @@ class MultiModalAgent:
                     "You are a helpful assistant. Use session history and "
                     "RAG context below if relevant. If not useful, ignore it."
                 )
-
-                if rag_context:
-                    context_text = "\n---\n".join(rag_context)
-                else:
-                    context_text = "(none)"
-
-                parts = [
+                final_contents = [
                     system_prompt,
-                    "CONVERSATION HISTORY:\n" + (history_block or "(none)"),
-                    "RAG CONTEXT:\n" + context_text,
+                    (
+                        "RAG CONTEXT:\n" + "\n---\n".join(rag_context)
+                        if rag_context
+                        else "RAG CONTEXT:\n(none)"
+                    ),
                     "USER MESSAGE:\n" + user_input,
                 ]
 
-                # call model
-                response = self.safe_generate_content(contents=parts)
-                answer = response.text
+            else:
+                final_contents = [user_input]
 
+            try:
+                # call model
+                response = self.safe_generate_content(contents=final_contents)
+                answer = response.text
+            except RetryableError as exception:
+                self.logger.error(f"Retryable model failure: {exception}")
+                continue
+
+            except AgentError as exception:
+                self.logger.error(f"Agent error: {exception}")
+                continue
+
+            except NonRetryableError as exception:
+                self.logger.error(f"Non-retryable model error: {exception}")
+                continue
+            print(f"Agent: {answer}")
+
+            if enable_rag and self.rag_store is not None:
                 # store assistant reply
-                reply_chunk_id = self.rag_store.add_chunk(
+                reply_chunk_ids = self.rag_store.add_logical_message(
                     content=answer,
                     role="agent",
                     session_id=session_id,
@@ -308,26 +315,20 @@ class MultiModalAgent:
                 )
 
                 # embed assistant reply
-                if self.enable_rag:
-                    try:
-                        reply_embedding = embed_text(
-                            answer,
-                            model=self.embedding_model,
-                        )
+                try:
+                    reply_embedding = embed_text(
+                        answer,
+                        model=self.embedding_model,
+                    )
+                    for chunk_id in reply_chunk_ids:
                         self.rag_store.add_embedding(
-                            chunk_id=reply_chunk_id,
+                            chunk_id=chunk_id,
                             embedding=reply_embedding,
                             model=self.embedding_model,
                         )
 
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
 
                 # print answer
                 self.logger.info(f"Agent: {answer}")
-
-            except AgentError as e:
-                self.logger.error(f"AgentError: {e}")
-
-            except Exception as e:
-                self.logger.error(f"Chat error: {e}")

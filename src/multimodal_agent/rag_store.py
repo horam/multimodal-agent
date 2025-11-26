@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from multimodal_agent.chunking import chunk_text
+from multimodal_agent.tokenizer import split_into_chunks
+
 
 @dataclass
 class Chunk:
@@ -66,6 +69,42 @@ class RAGStore:
     def delete_chunk(self, chunk_id: int) -> None:
         raise NotImplementedError
 
+    def add_logical_message(
+        self,
+        content: str,
+        role: str,
+        session_id: str | None,
+        source: str = "chat",
+        max_tokens: int = 200,
+    ) -> list[int]:
+        """
+        High-level API:
+        - normalize / chunk a logical message
+        - store each chunk in `chunks` table
+        - return list of chunk IDs.
+        """
+
+        if not isinstance(content, str):
+            raise TypeError(f"content must be str, received: {type(content)}")
+
+        text_chunks = split_into_chunks(
+            content,
+            max_tokens=max_tokens,
+        )
+        chunk_ids: list[int] = []
+
+        for chunk in text_chunks:
+            chunk_id = self.add_chunk(
+                content=chunk,
+                role=role,
+                session_id=session_id,
+                source=source,
+            )
+
+            chunk_ids.append(chunk_id)
+
+        return chunk_ids
+
 
 class SQLiteRAGStore(RAGStore):
     def __init__(self, db_path: Optional[str | Path] = None) -> None:
@@ -116,7 +155,13 @@ class SQLiteRAGStore(RAGStore):
         )
         self.conn.commit()
 
-    def add_chunk(self, content, role, session_id, source="chat") -> int:
+    def add_chunk(
+        self,
+        content,
+        role,
+        session_id,
+        source="chat",
+    ) -> int:
         cursor = self.conn.cursor()
         # If session_id provided but not already in sessions,
         # insert automatically
