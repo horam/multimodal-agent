@@ -34,18 +34,20 @@ def get_embedding_client():
 
 def embed_text(text: str, model: str = "text-embedding-004") -> List[float]:
     """
-    Embed a string using Google embeddings API **or** a DummyClient from tests.
+    Embed text using any available backend:
 
-    Supports both:
-    - Real client
-    - DummyClient
+    - Real Google API (client.embeddings.embed_content)
+    - Offline fallback (client.embed)
+    - DummyClient (client.models.embed_content) used in tests
+
+    Always returns a flat Python list of floats.
     """
     client = get_embedding_client()
 
     # Offline fallback: client has no real embedding API
     if hasattr(client, "embed"):
         return list(client.embed(text))
-    
+
     # Real google client.
     if hasattr(client, "embeddings"):
         response = client.embeddings.embed_content(
@@ -54,8 +56,8 @@ def embed_text(text: str, model: str = "text-embedding-004") -> List[float]:
         )
         first = response.embeddings[0]
         return list(getattr(first, "values", first))
-    
-    # Dummy api used in tests.    
+
+    # Dummy api used in tests.
     response = client.models.embed_content(model=model, contents=[text])
     first = response.embeddings[0]
     values = getattr(first, "values", first)

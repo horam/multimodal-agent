@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from typing import Optional
@@ -62,7 +63,13 @@ class MultiModalAgent:
         self.enable_rag = enable_rag
         self.embedding_model = embedding_model
 
-    def safe_generate_content(self, contents, max_retries=3, base_delay=1):
+    def safe_generate_content(
+        self,
+        contents,
+        max_retries: int = 3,
+        base_delay: int = 1,
+        response_format: str = "text",
+    ):
         # Detect offline mode (no real API key)
         api_key = os.environ.get("GOOGLE_API_KEY")
 
@@ -71,18 +78,30 @@ class MultiModalAgent:
 
             class FakeResponse:
                 def __init__(self, contents):
-                    self.text = "FAKE_RESPONSE: " + "\n".join(str(c) for c in contents)
+                    for content in contents:
+                        self.text = "FAKE_RESPONSE: " + "\n".join(content)
 
             return FakeResponse(contents)
+
+        if response_format == "json":
+            contents = [
+                "Return ONLY a valid JSON object without backticks.",
+                *contents,
+            ]
 
         for attempt in range(1, max_retries + 1):
             try:
                 self.logger.debug(f"Calling Gemini with contents: {contents}")
 
-                return self.client.models.generate_content(
+                response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                 )
+
+                if response_format == "json":
+                    return self._convert_to_json_response(response)
+                else:
+                    return response
 
             except Exception as exception:
                 if is_retryable_error(exception):
@@ -105,11 +124,27 @@ class MultiModalAgent:
         raise RetryableError("Model overloaded after maximum retry attempts.")
 
     # Public methods.
-    def ask_with_image(self, question: str, image: Part) -> str:
-        response = self.safe_generate_content([question, image])
+    def ask_with_image(
+        self,
+        question: str,
+        image: Part,
+        response_format: str = "text",
+    ) -> str:
+        response = self.safe_generate_content(
+            contents=[question, image],
+            response_format=response_format,
+        )
+
+        if response_format == "json":
+            return response.json
         return response.text
 
-    def ask(self, question: str, session_id: Optional[str] = None) -> str:
+    def ask(
+        self,
+        question: str,
+        session_id: Optional[str] = None,
+        response_format: str = "text",
+    ) -> str:
         """
         One-shot question API.
 
@@ -172,8 +207,14 @@ class MultiModalAgent:
             contents = [question]
 
         # call model and generate answer
-        response = self.safe_generate_content(contents)
-        answer = response.text
+        response = self.safe_generate_content(
+            contents,
+            response_format=response_format,
+        )
+        if response_format == "json":
+            answer = self._parse_json_output(response.text)
+        else:
+            answer = response.text
 
         # store agent reply
         if self.enable_rag and self.rag_store is not None:
@@ -208,6 +249,47 @@ class MultiModalAgent:
             return session_id
 
         return "default"
+
+    def _convert_to_json_response(self, response):
+        raw = response.text.strip()
+        # Remove markdown fences.
+        raw = self._strip_markdown(text=raw)
+
+        try:
+            objects = json.loads(raw)
+            response.json = objects
+            return response
+        except Exception:
+            fallback = {"raw": raw}
+            response.json = fallback
+            return response
+        
+    def _parse_json_output(self, text: str):
+        stripped = text.strip()
+
+        # Handle fenced code blocks: ```json ... ```
+        if stripped.startswith("```"):
+            stripped = stripped.strip("`").strip()
+        if stripped.startswith("json"):
+            stripped = stripped[len("json"):].strip()
+        if stripped.endswith("```"):
+            stripped = stripped[:-3].strip()
+
+        try:
+            return json.loads(stripped)
+        except Exception:
+            return {"raw": text}
+        
+    def _strip_markdown(self, text: str) -> str:
+        """
+        Remove ```json ... ``` fences if the model returns them.
+        """
+        if text.startswith("```"):
+            text = text.strip("`")
+            # remove markdown fences like ```json or ```
+            text = text.replace("json", "", 1).strip()
+        return text
+
 
     # Chat mode.
     def chat(
