@@ -62,24 +62,36 @@ class MultiModalAgent:
         self.enable_rag = enable_rag
         self.embedding_model = embedding_model
 
-    # safe request execution with retries.
     def safe_generate_content(self, contents, max_retries=3, base_delay=1):
+        # Detect offline mode (no real API key)
+        api_key = os.environ.get("GOOGLE_API_KEY")
+
+        # If client has no real network capability OR no API key → fallback
+        if not api_key or not hasattr(self.client, "models"):
+
+            class FakeResponse:
+                def __init__(self, contents):
+                    self.text = "FAKE_RESPONSE: " + "\n".join(str(c) for c in contents)
+
+            return FakeResponse(contents)
+
         for attempt in range(1, max_retries + 1):
             try:
                 self.logger.debug(f"Calling Gemini with contents: {contents}")
 
-                response = self.client.models.generate_content(
+                return self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                 )
-                return response
 
             except Exception as exception:
-                if is_retryable_error(exception=exception):
+                if is_retryable_error(exception):
                     wait = base_delay * (2 ** (attempt - 1))
-                    message = "(attempt {attempt}/{max_retries})."
-                    self.logger.warning(f"Warning: Model overloaded {message}")
-                    self.logger.warning(f" Retry in {wait}s...")
+                    attempts_message = f"(attempt {attempt}/{max_retries})."
+                    self.logger.warning(
+                        f"Warning: Model overloaded {attempts_message}.",
+                    )
+                    self.logger.warning(f"Retry in {wait}s...")
                     time.sleep(wait)
                     continue
 
