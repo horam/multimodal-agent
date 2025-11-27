@@ -1,9 +1,7 @@
-
-
 from multimodal_agent.chunking import (
-    chunk_text,
     _split_paragraphs,
     _split_sentences,
+    chunk_text,
 )
 
 
@@ -28,8 +26,11 @@ def test_chunk_text_single_paragraph_large():
 
 
 def test_chunk_text_multiple_paragraphs():
-    
-    text = "Paragraph_1.\n\n" + "Sentence1. Sentence2. " * 50 + "\n\nLast paragraph."
+
+    text_1 = "Paragraph_1.\n\n"
+    text_2 = "Sentence1. Sentence2. " * 50
+    text_3 = "\n\nLast paragraph."
+    text = text_1 + text_2 + text_3
     chunks = chunk_text(text, max_chars=120)
 
     # All chunks must be <= max_chars
@@ -74,33 +75,34 @@ def test_chunk_text_final_join_no_empty_chunks():
     # no empty chunks
     assert all(chunk.strip() for chunk in chunks)
 
+
 # split paragraphs
 def test_split_paragraphs_basic():
-    section_1="Paragraph1"
-    section_2="Paragraph2"
-    section_3 ="Paragraph3"
+    section_1 = "Paragraph1"
+    section_2 = "Paragraph2"
+    section_3 = "Paragraph3"
     text = f"{section_1}\n\n{section_2}\n\n{section_3}"
     parts = _split_paragraphs(text)
     assert parts == [section_1, section_2, section_3]
-    
-    
+
+
 def test_split_paragraphs_trims_whitespace():
-    text ="  A \n\n B\n\n\n C  "
+    text = "  A \n\n B\n\n\n C  "
     parts = _split_paragraphs(text)
     assert parts == ["A", "B", "C"]
-    
-    
+
+
 def test_split_empty_paragraphs():
     assert _split_paragraphs("") == []
-    
-    
-    
+
+
 # sentences
 def test_split_sentences_basic():
     text = "Hello world. This is a test!"
     sentences = _split_sentences(text)
-    assert sentences == [ "Hello world.",  "This is a test!"]
-    
+    assert sentences == ["Hello world.", "This is a test!"]
+
+
 def test_split_sentences_question_mark():
     text = "What is AI? It is cool."
     sentences = _split_sentences(text)
@@ -117,6 +119,3 @@ def test_split_sentences_mixed():
     text = "A! B? C."
     sentences = _split_sentences(text)
     assert sentences == ["A!", "B?", "C."]
-    
-    
-    

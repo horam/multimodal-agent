@@ -119,7 +119,8 @@ def _split_long_string(sentence: str, max_chars: int) -> List[str]:
 
             # Split inside the long word
             for i in range(0, len(word), max_chars):
-                chunks.append(word[i:i + max_chars])
+                split_word = word[i : i + max_chars]  # noqa
+                chunks.append(split_word)
             continue
 
         if not current:

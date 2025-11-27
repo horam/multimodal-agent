@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from multimodal_agent.chunking import chunk_text
 from multimodal_agent.tokenizer import split_into_chunks
 
 

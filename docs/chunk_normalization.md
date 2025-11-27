@@ -1,22 +1,19 @@
-# Chunk Normalization (Planned)
-
-This is a planned feature (v0.2.7+).
+# Chunk Normalization
 
 Chunk size normalization aims to keep embeddings:
+
 - smaller
 - more searchable
 - less noisy
 - cheaper (fewer tokens)
 
-
 # Why Normalize?
 
 You don't want:
+
 - giant paragraphs embedded directly
 - noisy logs going into RAG
 - 3000-token embeddings for a simple chat
-
-
 
 # Planned Behaviors
 
@@ -24,4 +21,3 @@ You don't want:
 2. Strip noise (timestamps, logs, repeated content)
 3. De-duplicate similar chunks
 4. Add chunk metadata
-

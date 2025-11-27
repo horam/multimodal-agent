@@ -1,6 +1,7 @@
 import re
 from typing import List
 
+
 def estimate_token_count(text: str) -> int:
     """
     Estimate token count using a lightweight heuristic:
@@ -36,9 +37,10 @@ def split_into_chunks(
         if isinstance(text, (int, float, bool)):
             text = str(text)
         else:
-            raise TypeError(f"split_into_chunks expects a string, got {type(text)}")
-        
-        
+            raise TypeError(
+                f"split_into_chunks expects a string, got {type(text)}",
+            )
+
     # remove empty leading and trailing spaces.
     cleaned = text.strip()
     if len(cleaned) == 0:
@@ -74,7 +76,7 @@ def split_into_chunks(
             # start a fresh chunk
             current = []
             current_tokens = 0
-        
+
         current.append(sentence)
         current_tokens += sentence_token
 

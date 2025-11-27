@@ -259,15 +259,20 @@ class MultiModalAgent:
                             model=self.embedding_model,
                         )
                 except Exception:
-                    pass
+                    question_embedding = None
 
-                # Retrieve RAG context from history.
-                similar = self.rag_store.search_similar(
-                    query_embedding=question_embedding,
-                    model=self.embedding_model,
-                    top_k=rag_top_k,
-                )
-                rag_context = [chunk.content for score, chunk in similar]
+                # If embedding failed, skip RAG retrieval
+                if question_embedding is None:
+                    rag_context = []
+                else:
+
+                    # Retrieve RAG context from history.
+                    similar = self.rag_store.search_similar(
+                        query_embedding=question_embedding,
+                        model=self.embedding_model,
+                        top_k=rag_top_k,
+                    )
+                    rag_context = [chunk.content for score, chunk in similar]
 
                 # Build final prompt
 
