@@ -1,7 +1,8 @@
 import json
 import os
 import time
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 from google import genai
 from google.genai.types import HttpOptions, Part
@@ -20,6 +21,13 @@ from .logger import get_logger
 def is_retryable_error(exception):
     # Example: Gemini overload has status_code = 503
     return hasattr(exception, "status_code") and exception.status_code == 503
+
+
+@dataclass
+class AgentResponse:
+    text: str
+    data: Optional[Dict[str, Any]] = None
+    usage: Optional[Dict[str, Any]] = None
 
 
 class MultiModalAgent:
@@ -73,16 +81,24 @@ class MultiModalAgent:
         # Detect offline mode (no real API key)
         api_key = os.environ.get("GOOGLE_API_KEY")
 
-        # If client has no real network capability OR no API key → fallback
+        # OFFLINE MODE (no real network)
         if not api_key or not hasattr(self.client, "models"):
 
+            text = "FAKE_RESPONSE: " + "\n".join(str(c) for c in contents)
+
             class FakeResponse:
-                def __init__(self, contents):
-                    for content in contents:
-                        self.text = "FAKE_RESPONSE: " + "\n".join(content)
+                def __init__(self, t):
+                    self.text = t
 
-            return FakeResponse(contents)
+            usage = {
+                "prompt_tokens": len("".join(str(c) for c in contents)),
+                "response_tokens": 5,
+                "total_tokens": len("".join(str(c) for c in contents)) + 5,
+            }
 
+            return FakeResponse(text), usage
+
+        # ONLINE MODE
         if response_format == "json":
             contents = [
                 "Return ONLY a valid JSON object without backticks.",
@@ -91,24 +107,41 @@ class MultiModalAgent:
 
         for attempt in range(1, max_retries + 1):
             try:
-                self.logger.debug(f"Calling Gemini with contents: {contents}")
-
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                 )
 
-                if response_format == "json":
-                    return self._convert_to_json_response(response)
-                else:
-                    return response
+                usage = None
+                meta = getattr(response, "usage_metadata", None)
+                if meta:
+                    usage = {
+                        "prompt_tokens": getattr(
+                            meta,
+                            "prompt_token_count",
+                            None,
+                        ),
+                        "response_tokens": getattr(
+                            meta,
+                            "candidates_token_count",
+                            None,
+                        ),
+                        "total_tokens": getattr(
+                            meta,
+                            "total_token_count",
+                            None,
+                        ),
+                    }
+
+                # Do *not* parse JSON here; just return raw response
+                return response, usage
 
             except Exception as exception:
                 if is_retryable_error(exception):
                     wait = base_delay * (2 ** (attempt - 1))
-                    attempts_message = f"(attempt {attempt}/{max_retries})."
+                    attempt_message = f"(attempt {attempt}/{max_retries})."
                     self.logger.warning(
-                        f"Warning: Model overloaded {attempts_message}.",
+                        f"Warning: Model overloaded {attempt_message} ",
                     )
                     self.logger.warning(f"Retry in {wait}s...")
                     time.sleep(wait)
@@ -129,22 +162,26 @@ class MultiModalAgent:
         question: str,
         image: Part,
         response_format: str = "text",
-    ) -> str:
-        response = self.safe_generate_content(
+    ) -> AgentResponse:
+        response, usage = self.safe_generate_content(
             contents=[question, image],
             response_format=response_format,
         )
 
+        raw_text = response.text
+
         if response_format == "json":
-            return response.json
-        return response.text
+            data = self._parse_json_output(raw_text)
+            return AgentResponse(text=raw_text, data=data, usage=usage)
+
+        return AgentResponse(text=raw_text, data=None, usage=usage)
 
     def ask(
         self,
         question: str,
         session_id: Optional[str] = None,
         response_format: str = "text",
-    ) -> str:
+    ) -> AgentResponse:
         """
         One-shot question API.
 
@@ -163,7 +200,7 @@ class MultiModalAgent:
             question_chunk_ids = self.rag_store.add_logical_message(
                 content=question,
                 role="user",
-                session_id=None,
+                session_id=session_id,
                 source="ask",
             )
             # embed question
@@ -207,37 +244,30 @@ class MultiModalAgent:
             contents = [question]
 
         # call model and generate answer
-        response = self.safe_generate_content(
+        response, usage = self.safe_generate_content(
             contents,
             response_format=response_format,
         )
+
+        # Json mode
         if response_format == "json":
-            answer = self._parse_json_output(response.text)
-        else:
-            answer = response.text
+            raw_text = response.text
+            data = self._parse_json_output(raw_text)
 
-        # store agent reply
+            # store agent reply in RAG
+            if self.enable_rag and self.rag_store is not None:
+                to_store = data if data is not None else raw_text
+                self._store_agent_reply(answer=to_store, session_id=session_id)
+
+            return AgentResponse(text=raw_text, data=data, usage=usage)
+
+        # Text mode
+        raw_text = response.text
+
         if self.enable_rag and self.rag_store is not None:
-            reply_chunk_ids = self.rag_store.add_logical_message(
-                content=answer,
-                role="agent",
-                session_id=session_id,
-                source="ask",
-            )
-            # embed reply too so future questions can reference it
-            try:
-                reply_emb = embed_text(answer, model=self.embedding_model)
-                for chunk_id in reply_chunk_ids:
-                    self.rag_store.add_embedding(
-                        chunk_id=chunk_id,
-                        embedding=reply_emb,
-                        model=self.embedding_model,
-                    )
+            self._store_agent_reply(answer=raw_text, session_id=session_id)
 
-            except Exception:
-                # Do not crash the CLI if embedding of reply fails
-                pass
-        return answer
+        return AgentResponse(text=raw_text, data=None, usage=usage)
 
     def _ensure_session_id(self, session_id: Optional[str]) -> str:
         """
@@ -263,7 +293,7 @@ class MultiModalAgent:
             fallback = {"raw": raw}
             response.json = fallback
             return response
-        
+
     def _parse_json_output(self, text: str):
         stripped = text.strip()
 
@@ -271,18 +301,19 @@ class MultiModalAgent:
         if stripped.startswith("```"):
             stripped = stripped.strip("`").strip()
         if stripped.startswith("json"):
-            stripped = stripped[len("json"):].strip()
+            stripped = stripped[len("json") :].strip()  # noqa
         if stripped.endswith("```"):
             stripped = stripped[:-3].strip()
 
         try:
             return json.loads(stripped)
         except Exception:
-            return {"raw": text}
-        
+            return None
+
     def _strip_markdown(self, text: str) -> str:
         """
         Remove ```json ... ``` fences if the model returns them.
+
         """
         if text.startswith("```"):
             text = text.strip("`")
@@ -290,6 +321,27 @@ class MultiModalAgent:
             text = text.replace("json", "", 1).strip()
         return text
 
+    def _store_agent_reply(self, answer, session_id):
+        # convert answer to text
+        text = answer if isinstance(answer, str) else json.dumps(answer)
+
+        reply_chunk_ids = self.rag_store.add_logical_message(
+            content=text,
+            role="agent",
+            session_id=session_id,
+            source="ask",
+        )
+
+        try:
+            reply_emb = embed_text(text, model=self.embedding_model)
+            for chunk_id in reply_chunk_ids:
+                self.rag_store.add_embedding(
+                    chunk_id=chunk_id,
+                    embedding=reply_emb,
+                    model=self.embedding_model,
+                )
+        except Exception:
+            pass
 
     # Chat mode.
     def chat(

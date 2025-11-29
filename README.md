@@ -65,30 +65,67 @@ print(agent.ask_with_image("Describe this image.", image))
 
 ## JSON Response Mode
 
-Ask for strict JSON:
+RAG Mode (Optional)
+
+You can request structured JSON output by passing `response_format="json"`:
 
 ```python
-response = agent.ask(
-    "Give me a JSON summary of The Matrix.",
-    response_format="json",
+from multimodal_agent import MultiModalAgent
+
+agent = MultiModalAgent(enable_rag=False)
+
+result = agent.ask("Return a JSON object with a and b.", response_format="json")
+print(result.data)   # {'a': 1, 'b': 'hello'}
+```
+
+The agent automatically:
+
+- Strips ```json fenced blocks
+- Parses JSON
+- Falls back to {"raw": `<text>`} when invalid JSON is returned
+- Maintains identical behavior in online and offline mode
+
+
+## Offline Mode
+
+If no `GOOGLE_API_KEY` is found, the agent enters **offline simulation mode**:
+
+- No real API calls are made
+- Responses are deterministic and prefixed with `"FAKE_RESPONSE:"`
+- JSON mode still returns proper `{}`-dicts
+- Usage metadata is simulated for testing
+
+This ensures the package is fully testable without credentials.
+
+## AgentResponse Object
+
+All `.ask()` and `.chat()` calls return:
+
+```python
+AgentResponse(
+    text="<model text>",
+    data={...},          # JSON dict if json mode, else None
+    usage={
+        "prompt_tokens": ...,
+        "response_tokens": ...,
+        "total_tokens": ...,
+    }
 )
-
-print(response)
 ```
 
-Output example:
+
+
+## Asking With Images
 
 ```python
-{"title": "The Matrix", "year": 1999}
+from multimodal_agent.utils import load_image_as_part
+
+img = load_image_as_part("photo.jpg")
+resp = agent.ask_with_image("Describe this image", img)
+print(resp.text)
 ```
 
-Supports:
-✔ Raw dict return
-✔ JSON inside markdown fences
-✔ Invalid JSON fallback → {"raw": "..."}'
-✔ Works in offline mode (FakeResponse)
 
-## RAG Mode (Optional)
 
 Enable RAG:
 

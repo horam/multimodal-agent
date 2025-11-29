@@ -9,8 +9,8 @@ Below are the minimum examples needed to use the agent.
 from multimodal_agent import MultiModalAgent
 
 agent = MultiModalAgent()
-response = agent.ask("Tell me something interesting about the universe.")
-print(response)
+resp = agent.ask("Tell me something interesting about the universe.")
+print(resp.text)
 ```
 ## Image + Text Generation
 ```python
@@ -20,12 +20,12 @@ from multimodal_agent.utils import load_image_as_part
 agent = MultiModalAgent()
 
 image = load_image_as_part("cat.jpg")
-response = agent.ask_with_image("Describe this cat.", image)
+resp = agent.ask_with_image("Describe this cat.", image)
 
-print(response)
+print(resp.text)
 ```
 ## CLI Quickstart
-``` bash
+```bash
 agent ask "hello world"
 agent image photo.jpg "what do you see?"
 agent chat
@@ -33,6 +33,7 @@ agent --version
 agent --debug ask "hello"
 ```
 ## Error Handling Example
+
 ``` python
 from multimodal_agent import MultiModalAgent
 from multimodal_agent.errors import AgentError
@@ -40,30 +41,39 @@ from multimodal_agent.errors import AgentError
 agent = MultiModalAgent()
 
 try:
-    print(agent.ask("hello"))
+    print(agent.ask("hello").text)
 except AgentError as e:
     print("The request failed:", e)
-```
+```    
 ## JSON Response Mode (v0.3.0)
-The agent can return structured JSON instead of plain text:
+The agent can return structured JSON:
 
 ```python
 from multimodal_agent import MultiModalAgent
 
 agent = MultiModalAgent(enable_rag=False)
 
-data = agent.ask(
+resp = agent.ask(
     "Return a JSON person object.",
     response_format="json"
 )
-print(data)  # → Python dict
-```
-Supported behaviors:
 
-- Accepts raw JSON
+print(resp.data)  # → Python dict
+```
+
+<strong>Supported behavior</strong>
+
+- Accepts raw JSON responses
 
 - Removes ```json fenced blocks
 
-- Falls back to {"raw": "..."}
+- Fallback to {"raw": "..."}
 
-- Works in offline FakeResponse mode
+- Works identically in offline FakeResponse mode
+
+- Returns an AgentResponse with:
+```python
+resp.text  # original text
+resp.data  # parsed JSON dict
+resp.usage # token usage (dict or None)
+```

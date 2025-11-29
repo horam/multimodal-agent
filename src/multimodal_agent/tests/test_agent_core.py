@@ -3,7 +3,7 @@ from multimodal_agent.utils import load_image_as_part
 
 def test_task_text(mock_agent):
     response = mock_agent.ask("hello")
-    assert response == "mocked response"
+    assert response.text == "mocked response"
 
 
 def test_task_with_image(mock_agent, tmp_path, monkeypatch):
@@ -27,7 +27,7 @@ def test_task_with_image(mock_agent, tmp_path, monkeypatch):
     image_part = load_image_as_part(str(image_path))
 
     response = mock_agent.ask_with_image("describe", image_part)
-    assert response == "mocked response"
+    assert response.text == "mocked response"
 
 
 def test_chat_history_format(mock_agent, mocker):
