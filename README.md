@@ -157,6 +157,49 @@ Quit:
 You: exit
 ```
 
+## Token Usage Logging (v0.3.2)
+
+Multimodal-Agent can automatically record token usage for every request (text, JSON, or image-based).
+
+Usage logging is **enabled by default**.
+
+Each call writes a compact entry into:
+```bash
+~/.multimodal_agent/usage.log
+```
+
+### Example Log Entry
+---
+2025-01-12T15:22:14Z | model=gemini-2.5-flash | prompt=42 | response=18 | total=60
+
+### Disable Usage Logging
+
+If you do not want any local logging:
+
+```python
+agent = MultiModalAgent(enable_rag=False)
+agent.usage_logging = False
+```
+
+**Custom Log Path**
+
+```python
+agent.usage_log_path = "/path/to/your/custom.log"
+```
+
+**JSON + Image Mode Support**
+Usage logging works seamlessly across:
+
+
+- ask()
+- ask_with_image()
+- response_format="json"
+- offline FakeResponse mode
+
+Logging is  **silent** , non-blocking, and wrapped in safe try/except guards.
+
+It never interferes with the agent and never breaks tests.
+
 ## Running Tests
 
 ```bash

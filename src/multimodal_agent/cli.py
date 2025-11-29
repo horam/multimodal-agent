@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys as system
 
@@ -157,6 +158,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def handle_text(agent, question, debug=False, response_format="text"):
+    response = agent.ask(question, response_format=response_format)
+
+    if response_format == "json":
+        print(json.dumps(response.data, indent=2))
+    else:
+        print(response.text)
+
+    if response.usage and debug:
+        print(
+            f"[usage] prompt={response.usage.get('prompt_tokens')} "
+            f"response={response.usage.get('response_tokens')} "
+            f"total={response.usage.get('total_tokens')}"
+        )
+
+
+def handle_image(agent, image, question, debug=False, response_format="text"):
+    response = agent.ask_with_image(
+        question,
+        image,
+        response_format=response_format,
+    )
+
+    if response_format == "json":
+        print(json.dumps(response.data, indent=2))
+    else:
+        print(response.text)
+
+    if response.usage and debug:
+        print(
+            f"[usage] prompt={response.usage.get('prompt_tokens')} "
+            f"response={response.usage.get('response_tokens')} "
+            f"total={response.usage.get('total_tokens')}"
+        )
 
 
 def main():

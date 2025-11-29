@@ -71,6 +71,14 @@ class MultiModalAgent:
         self.enable_rag = enable_rag
         self.embedding_model = embedding_model
 
+        self.usage_logging = True
+        self.usage_log_path = os.path.expanduser(
+            "~/.multimodal_agent/usage.log",
+        )
+
+        # ensure directory exist.
+        os.makedirs(os.path.dirname(self.usage_log_path), exist_ok=True)
+
     def safe_generate_content(
         self,
         contents,
@@ -86,7 +94,7 @@ class MultiModalAgent:
 
             text = "FAKE_RESPONSE: " + "\n".join(str(c) for c in contents)
 
-            class FakeResponse:
+            class RespWrapper:
                 def __init__(self, t):
                     self.text = t
 
@@ -96,7 +104,15 @@ class MultiModalAgent:
                 "total_tokens": len("".join(str(c) for c in contents)) + 5,
             }
 
-            return FakeResponse(text), usage
+            if usage and self.usage_logging:
+                self._log_usage(
+                    usage=usage,
+                    contents=contents,
+                    response_format=response_format,
+                    model=self.model,
+                )
+
+            return RespWrapper(text), usage
 
         # ONLINE MODE
         if response_format == "json":
@@ -133,8 +149,18 @@ class MultiModalAgent:
                         ),
                     }
 
-                # Do *not* parse JSON here; just return raw response
-                return response, usage
+                class RespWrapper:
+                    def __init__(self, t):
+                        self.text = t
+
+                if usage and self.usage_logging:
+                    self._log_usage(
+                        usage=usage,
+                        contents=contents,
+                        response_format=response_format,
+                        model=self.model,
+                    )
+                return RespWrapper(response.text), usage
 
             except Exception as exception:
                 if is_retryable_error(exception):
@@ -163,18 +189,39 @@ class MultiModalAgent:
         image: Part,
         response_format: str = "text",
     ) -> AgentResponse:
+
         response, usage = self.safe_generate_content(
             contents=[question, image],
             response_format=response_format,
         )
 
-        raw_text = response.text
+        # Offline safety: response sometimes may be a dict
+        if isinstance(response, dict):
+            return AgentResponse(
+                text=str(response),
+                data=response if response_format == "json" else None,
+                usage=usage,
+            )
+
+        text = response.text
 
         if response_format == "json":
-            data = self._parse_json_output(raw_text)
-            return AgentResponse(text=raw_text, data=data, usage=usage)
+            cleaned = text.strip()
 
-        return AgentResponse(text=raw_text, data=None, usage=usage)
+            # remove fenced code blocks just like ask()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.strip("`")
+                cleaned = cleaned.replace("json", "", 1).strip()
+
+            try:
+                data = self._parse_json_output(cleaned)
+            except Exception:
+                data = None
+
+            return AgentResponse(text=text, data=data, usage=usage)
+
+        # text mode
+        return AgentResponse(text=text, data=None, usage=usage)
 
     def ask(
         self,
@@ -195,6 +242,7 @@ class MultiModalAgent:
         #  store session id
         session_id = self._ensure_session_id(session_id)
 
+        # RAG logic (unchanged)
         if self.enable_rag and self.rag_store is not None:
             # store question as a chunk
             question_chunk_ids = self.rag_store.add_logical_message(
@@ -243,31 +291,41 @@ class MultiModalAgent:
         else:
             contents = [question]
 
-        # call model and generate answer
+        # Always returns (RespWrapper, usage)
         response, usage = self.safe_generate_content(
             contents,
             response_format=response_format,
         )
 
+        text = response.text
+
         # Json mode
         if response_format == "json":
-            raw_text = response.text
-            data = self._parse_json_output(raw_text)
+
+            cleaned = text.strip()
+
+            if cleaned.startswith("```"):
+                cleaned = cleaned.strip("`").strip()
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[len("json") :].strip()  # noqa
+
+            data = self._parse_json_output(cleaned)
 
             # store agent reply in RAG
             if self.enable_rag and self.rag_store is not None:
-                to_store = data if data is not None else raw_text
-                self._store_agent_reply(answer=to_store, session_id=session_id)
+                self._store_agent_reply(answer=data, session_id=session_id)
 
-            return AgentResponse(text=raw_text, data=data, usage=usage)
+            return AgentResponse(
+                text=text,
+                data=data,
+                usage=usage,
+            )
 
         # Text mode
-        raw_text = response.text
-
         if self.enable_rag and self.rag_store is not None:
-            self._store_agent_reply(answer=raw_text, session_id=session_id)
+            self._store_agent_reply(answer=text, session_id=session_id)
 
-        return AgentResponse(text=raw_text, data=None, usage=usage)
+        return AgentResponse(text=text, data=None, usage=usage)
 
     def _ensure_session_id(self, session_id: Optional[str]) -> str:
         """
@@ -341,6 +399,26 @@ class MultiModalAgent:
                     model=self.embedding_model,
                 )
         except Exception:
+            pass
+
+    def _log_usage(self, usage, contents, response_format, model):
+        """
+        Append a structured usage record to usage.log.
+        """
+        try:
+            with open(self.usage_log_path, "a") as f:
+                record = {
+                    "timestamp": time.time(),
+                    "model": model,
+                    "prompt_tokens": usage.get("prompt_tokens"),
+                    "response_tokens": usage.get("response_tokens"),
+                    "total_tokens": usage.get("total_tokens"),
+                    "response_format": response_format,
+                    "prompt_preview": str(contents)[:150],  # for debugging
+                }
+                f.write(json.dumps(record) + "\n")
+        except Exception:
+            # usage logging must never crash the agent.
             pass
 
     # Chat mode.
@@ -441,8 +519,16 @@ class MultiModalAgent:
 
             try:
                 # call model
-                response = self.safe_generate_content(contents=final_contents)
+                response, usage = self.safe_generate_content(
+                    contents=final_contents,
+                )
                 answer = response.text
+                if usage:
+                    self.logger.info(
+                        f"[usage] prompt={usage.get('prompt_tokens')} "
+                        f"response={usage.get('response_tokens')} "
+                        f"total={usage.get('total_tokens')}"
+                    )
             except RetryableError as exception:
                 self.logger.error(f"Retryable model failure: {exception}")
                 continue
@@ -454,7 +540,6 @@ class MultiModalAgent:
             except NonRetryableError as exception:
                 self.logger.error(f"Non-retryable model error: {exception}")
                 continue
-            print(f"Agent: {answer}")
 
             if enable_rag and self.rag_store is not None:
                 # store assistant reply
@@ -481,5 +566,5 @@ class MultiModalAgent:
                 except Exception:
                     pass
 
-                # print answer
-                self.logger.info(f"Agent: {answer}")
+            # print answer
+            self.logger.info(f"Agent: {answer}")
