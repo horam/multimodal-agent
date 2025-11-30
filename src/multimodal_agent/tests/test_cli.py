@@ -28,7 +28,9 @@ def test_cli_version(monkeypatch, capsys):
 
 
 def test_cli_ask(monkeypatch, capsys, mocker):
-    fake_agent = types.SimpleNamespace(ask=lambda prompt: f"ANSWER: {prompt}")
+    fake_agent = types.SimpleNamespace(
+        ask=lambda prompt, **kwargs: f"ANSWER: {prompt}",
+    )
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
 
     monkeypatch.setattr(system, "argv", ["agent", "ask", "hello"])
@@ -41,8 +43,9 @@ def test_cli_ask(monkeypatch, capsys, mocker):
 # Test text and image question - image command.
 def test_cli_image(monkeypatch, capsys, mocker):
     fake_agent = types.SimpleNamespace(
-        ask_with_image=lambda prompt, img: f"IMAGE_ANSWER: {prompt}",
+        ask_with_image=lambda prompt, img, **kwargs: f"IMAGE_ANSWER: {prompt}",
     )
+
     mocker.patch.object(cli, "MultiModalAgent", return_value=fake_agent)
     mocker.patch.object(cli, "load_image_as_part", return_value="FAKE_PART")
 

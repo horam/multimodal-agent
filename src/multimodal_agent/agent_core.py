@@ -8,6 +8,7 @@ from google import genai
 from google.genai.types import HttpOptions, Part
 
 from multimodal_agent.embedding import embed_text
+from multimodal_agent.formatting import format_output
 from multimodal_agent.rag_store import (
     RAGStore,
     SQLiteRAGStore,
@@ -188,6 +189,7 @@ class MultiModalAgent:
         question: str,
         image: Part,
         response_format: str = "text",
+        formatted: bool = False,
     ) -> AgentResponse:
 
         response, usage = self.safe_generate_content(
@@ -221,6 +223,9 @@ class MultiModalAgent:
             return AgentResponse(text=text, data=data, usage=usage)
 
         # text mode
+        if formatted:
+            text = format_output(text)
+
         return AgentResponse(text=text, data=None, usage=usage)
 
     def ask(
@@ -228,6 +233,7 @@ class MultiModalAgent:
         question: str,
         session_id: Optional[str] = None,
         response_format: str = "text",
+        formatted: bool = False,
     ) -> AgentResponse:
         """
         One-shot question API.
@@ -324,6 +330,9 @@ class MultiModalAgent:
         # Text mode
         if self.enable_rag and self.rag_store is not None:
             self._store_agent_reply(answer=text, session_id=session_id)
+
+        if formatted:
+            text = format_output(text)
 
         return AgentResponse(text=text, data=None, usage=usage)
 

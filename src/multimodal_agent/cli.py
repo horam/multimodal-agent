@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable debug logging",
     )
+
     # parser model field.
     parser.add_argument(
         "--model",
@@ -59,6 +60,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable RAG (ignore local memory)",
     )
+
+    # format
+    ask_parser.add_argument(
+        "--format",
+        action="store_true",
+        help="Format output syntax.",
+    )
+
     ask_parser.add_argument(
         "--session", type=str, default=None, help="Session ID for this query"
     )
@@ -76,6 +85,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Session ID for this query",
+    )
+
+    # format
+    image_parser.add_argument(
+        "--format",
+        action="store_true",
+        help="Format output syntax.",
     )
 
     # agent command.
@@ -223,12 +239,22 @@ def main():
     try:
         # asking question in text.
         if args.command == "ask":
-            response = agent.ask(args.prompt)
+            formatted = getattr(args, "format", False)
+            response = agent.ask(
+                args.prompt,
+                formatted=formatted,
+            )
+
             # chat output.
+            if hasattr(response, "text"):
+                text = response.text
+            else:
+                text = str(response)
+
             print_markdown_with_meta(
                 sections=[
                     ("Question", args.prompt),
-                    ("Answer", response),
+                    ("Answer", text),
                 ],
                 meta={
                     "type": "ask",
@@ -237,6 +263,7 @@ def main():
                     "rag_enabled": enable_rag,
                 },
             )
+
             return
         # Image questions.
         elif args.command == "image":
@@ -246,12 +273,23 @@ def main():
                 raise InvalidImageError(
                     f"Cannot read image: {args.image_path}",
                 )
-            response = agent.ask_with_image(args.prompt, image_as_part)
+
+            formatted = getattr(args, "format", False)
+            response = agent.ask_with_image(
+                args.prompt,
+                image_as_part,
+                formatted=formatted,
+            )
+
             # chat output.
+            if hasattr(response, "text"):
+                text = response.text
+            else:
+                text = str(response)
             print_markdown_with_meta(
                 sections=[
                     ("Question", args.prompt),
-                    ("Answer", response),
+                    ("Answer", text),
                 ],
                 meta={
                     "type": "image",

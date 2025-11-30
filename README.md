@@ -16,6 +16,8 @@
 - 🔹 **Chunking + RAG store (simple & embeddable)**
 - 🔹 **Session history + memory**
 - 🔹 **Extensible architecture for VS Code / Flutter integration**
+- 🔹 **Automatic formatting engine (JSON / code / XML / plain)**
+- 🔹 **Language detection for Python, JS, Java, Kotlin, Swift, Obj-C, Dart, C++, XML, JSON**
 
 ---
 
@@ -157,6 +159,13 @@ Quit:
 You: exit
 ```
 
+### **Formatted output**
+
+<pre class="overflow-visible!" data-start="1928" data-end="1974"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent ask "write python </span><span>code</span><span>" </span><span>--format</span><span>
+</span></span></code></div></div></pre>
+
+Produces fenced, language-annotated code.
+
 ## Token Usage Logging (v0.3.2)
 
 Multimodal-Agent can automatically record token usage for every request (text, JSON, or image-based).
@@ -169,7 +178,6 @@ Each call writes a compact entry into:
 ```
 
 ### Example Log Entry
----
 2025-01-12T15:22:14Z | model=gemini-2.5-flash | prompt=42 | response=18 | total=60
 
 ### Disable Usage Logging
@@ -200,6 +208,54 @@ Logging is  **silent** , non-blocking, and wrapped in safe try/except guards.
 
 It never interferes with the agent and never breaks tests.
 
+## **Formatting Engine (v0.4.0)**
+
+Multimodal-Agent now includes a robust formatter that automatically detects and beautifies output.
+
+Supported types:
+
+* **JSON** → pretty-printed, stable formatting
+* **Code** → wrapped in triple backticks with detected language
+* **XML / HTML** → pretty printed
+* **Plain text** → normalized
+
+### Usage:
+
+<pre class="overflow-visible!" data-start="1133" data-end="1217"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>resp = agent.ask(</span><span>"write python code"</span><span>, formatted=</span><span>True</span><span>)
+</span><span>print</span><span>(resp.text)
+</span></span></code></div></div></pre>
+
+Example output:
+
+<pre class="overflow-visible!" data-start="1236" data-end="1299"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-markdown"><span><span>```python
+def add(a, b):
+    return a + b
+```</span></span></code></div></div></pre>
+
+## **Language Detection (v0.4.0)**
+
+The formatter uses the internal `detect_language()` to identify code automatically.
+
+Detected languages include:
+
+* Python
+* JavaScript
+* Java
+* Kotlin
+* Swift
+* Objective-C
+* Dart
+* C++
+* JSON
+* XML/HTML
+* Plain text
+
+### Example:
+
+<pre class="overflow-visible!" data-start="1696" data-end="1828"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>from</span><span> multimodal_agent.formatting </span><span>import</span><span> detect_language
+
+</span><span>print</span><span>(detect_language(</span><span>"fun greet(name: String)"</span><span>))  </span><span># → kotlin</span></span></code></div></div></pre>
+
 ## Running Tests
 
 ```bash
@@ -227,13 +283,13 @@ utils.py — image loading, memory, history helpers
 
 v0.3.2 — Token usage logging
 
-v0.4.0 — Flutter-friendly structured outputs
+v0.4.0 — Formatting engine + language detection
 
-v0.5.0 — VS Code extension alpha
+v0.5.0 — Agent server mode
 
-v0.6.0 — Android Studio plugin
+v0.6.0 — VS Code extension
 
-v1.0.0 — Public launch (website + demos + docs)
+v1.0.0 — Website + demos + documentation
 
 # License
 
