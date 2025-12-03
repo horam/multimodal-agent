@@ -1,4 +1,4 @@
-from multimodal_agent.agent_core import MultiModalAgent
+from multimodal_agent.core.agent_core import MultiModalAgent
 
 
 def test_chat_error_path(monkeypatch, caplog):

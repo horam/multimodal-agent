@@ -7,7 +7,7 @@ import sys
 
 from dotenv import load_dotenv
 
-from src.multimodal_agent.agent_core import MultiModalAgent
+from multimodal_agent.core.agent_core import MultiModalAgent
 from src.multimodal_agent.utils import load_image_as_part
 
 

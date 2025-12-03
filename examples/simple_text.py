@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from src.multimodal_agent.agent_core import MultiModalAgent
+from multimodal_agent.core.agent_core import MultiModalAgent
 
 load_dotenv()
 agent = MultiModalAgent()

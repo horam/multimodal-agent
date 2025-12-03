@@ -1,6 +1,6 @@
 import pytest
 
-import multimodal_agent.utils as utils
+import multimodal_agent.deprecated.json_memory as utils
 
 
 @pytest.fixture

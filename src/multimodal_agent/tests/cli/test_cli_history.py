@@ -3,7 +3,7 @@ import types
 from types import SimpleNamespace
 
 import multimodal_agent.utils as utils
-from multimodal_agent import cli
+from multimodal_agent.cli import cli
 
 
 def make_fake_store(chunks=None):

@@ -1,4 +1,4 @@
-### *Retrieval-Augmented Generation (RAG) in Multimodal Agent (0.2.6+)*
+### **Retrieval-Augmented Generation (RAG) in Multimodal Agent (0.2.6+)**
 
 RAG enhances your agent by giving it  **persistent memory** ,  **context retrieval** , and **long-range recall** across sessions.
 
@@ -235,6 +235,28 @@ agent history </span><span>summary</span><span></span><span>--session</span><spa
 * No hybrid search (BM25 + embeddings)
 
 These are planned improvements.
+
+---
+
+# RAG Details
+
+- Memory stored at `~/.multimodal_agent/memory.db`
+- Each message is chunked
+- Embeddings stored per chunk
+- Cosine similarity search
+- Used automatically during ask/chat
+
+Tables:
+
+- `sessions`
+- `chunks`
+- `embeddings`
+
+Search:
+
+```python
+rag_store.search_similar(query="hello", model="text-embedding-004")
+```
 
 ---
 

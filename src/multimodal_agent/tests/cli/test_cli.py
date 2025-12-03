@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from multimodal_agent import __version__, cli
+from multimodal_agent import __version__
+from multimodal_agent.cli import cli
 
 
 @pytest.fixture(autouse=True)
@@ -78,7 +79,8 @@ def test_cli_image_invalid(monkeypatch, caplog, mocker):
         side_effect=Exception("boom"),
     )
 
-    # Route CLI logger into caplog's handler so we can assert on log output
+    # Route CLI l
+    # Logger into caplog's handler so we can assert on log output
     logger = cli.logger
     logger.handlers = [caplog.handler]
     logger.setLevel("ERROR")

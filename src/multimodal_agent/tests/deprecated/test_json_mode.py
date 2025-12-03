@@ -1,7 +1,7 @@
 import pytest
 
 from multimodal_agent import MultiModalAgent
-from multimodal_agent.agent_core import AgentResponse
+from multimodal_agent.core.agent_core import AgentResponse
 from multimodal_agent.errors import NonRetryableError
 from multimodal_agent.utils import load_image_as_part
 

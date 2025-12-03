@@ -1,4 +1,4 @@
-from multimodal_agent.formatting import detect_language
+from multimodal_agent.cli.formatting import detect_language
 
 
 # Python

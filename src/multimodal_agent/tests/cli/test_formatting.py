@@ -1,6 +1,6 @@
 import json
 
-from multimodal_agent.formatting import (
+from multimodal_agent.cli.formatting import (
     detect_content_type,
     format_code,
     format_json,

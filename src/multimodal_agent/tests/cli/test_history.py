@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from multimodal_agent.utils import (
+from multimodal_agent.cli.history import (
     _clear_history,
     _delete_history,
     _show_history,

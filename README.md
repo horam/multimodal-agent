@@ -6,36 +6,34 @@
 
 ## Features
 
-- 🔹 **Text generation (Gemini)**
-- 🔹 **Image + text multimodal input**
-- 🔹 **Retry logic with exponential backoff**
-- 🔹 **JSON response mode** (`response_format="json"`)
-- 🔹 **Dummy offline mode (no API key required)**
-- 🔹 **Clean CLI (`agent`)**
-- 🔹 **90%+ test coverage**
-- 🔹 **Chunking + RAG store (simple & embeddable)**
-- 🔹 **Session history + memory**
-- 🔹 **Extensible architecture for VS Code / Flutter integration**
-- 🔹 **Automatic formatting engine (JSON / code / XML / plain)**
-- 🔹 **Language detection for Python, JS, Java, Kotlin, Swift, Obj-C, Dart, C++, XML, JSON**
+- **Text generation**
+- **Image + text multimodal input**
+- **RAG memory store (SQLite)**
+- **Server mode (FastAPI)**
+- **Clean CLI (`agent`)**
+- **Retry logic + error handling**
+- **JSON mode**
+- **Token usage logging**
+- **Syntax-aware output formatting**
+- **Session-aware chat with persistent memory**
+- Added **Server API**, **full RAG flow**, **image upload**, **memory search**, and more.
 
----
 
 ## Installation
 
 ```bash
 pip install multimodal-agent
 ```
-
-Or install a specific version:
+Or local:
 
 ```bash
-pip install multimodal-agent==0.3.0
+pip install -e .
 ```
+Requires:
 
-### Setup API Key (Optional)
+- Python 3.10+
 
-If you want real Gemini output:
+- A Google API key `(GOOGLE_API_KEY)`
 
 ```bash
 export GOOGLE_API_KEY="your-key-here"
@@ -43,162 +41,154 @@ export GOOGLE_API_KEY="your-key-here"
 
 Without a key, the package still works using offline FakeResponse for testing & debugging.
 
-## Basic Usage
+## Quick Start
+**Text Question**
+```bash
+agent ask "hello"
+```
+Output:
 
-```python
-from multimodal_agent import MultiModalAgent
+```shell
+## Question
+hello
 
-agent = MultiModalAgent(enable_rag=False)
-
-print(agent.ask("Explain quantum physics to me."))
+## Answer
+hello
+```
+**Disable RAG:**
+```bash
+agent ask "hello" --no-rag
+```
+**JSON mode**
+```bash
+agent ask "give me json" --json
+```
+## Image + Text Input
+```bash
+agent image test.jpg "describe this"
+```
+## Chat Mode (Persistent Memory)
+```bash
+agent chat
 ```
 
-## Ask With Image
+Features:
 
-```python
-from multimodal_agent import MultiModalAgent
-from multimodal_agent.utils import load_image_as_part
+- Session aware
 
-agent = MultiModalAgent(enable_rag=False)
+- Stores conversation chunks
 
-image = load_image_as_part("cat.jpg")
-print(agent.ask_with_image("Describe this image.", image))
-```
+- Embeds each message
 
-## JSON Response Mode
+- Retrieves similar chunks (RAG)
 
-RAG Mode (Optional)
+- Generates response
 
-You can request structured JSON output by passing `response_format="json"`:
+- Logs usage
 
-```python
-from multimodal_agent import MultiModalAgent
-
-agent = MultiModalAgent(enable_rag=False)
-
-result = agent.ask("Return a JSON object with a and b.", response_format="json")
-print(result.data)   # {'a': 1, 'b': 'hello'}
-```
-
-The agent automatically:
-
-- Strips ```json fenced blocks
-- Parses JSON
-- Falls back to {"raw": `<text>`} when invalid JSON is returned
-- Maintains identical behavior in online and offline mode
-
-## Offline Mode
-
-If no `GOOGLE_API_KEY` is found, the agent enters **offline simulation mode**:
-
-- No real API calls are made
-- Responses are deterministic and prefixed with `"FAKE_RESPONSE:"`
-- JSON mode still returns proper `{}`-dicts
-- Usage metadata is simulated for testing
-
-This ensures the package is fully testable without credentials.
-
-## AgentResponse Object
-
-All `.ask()` and `.chat()` calls return:
-
-```python
-AgentResponse(
-    text="<model text>",
-    data={...},          # JSON dict if json mode, else None
-    usage={
-        "prompt_tokens": ...,
-        "response_tokens": ...,
-        "total_tokens": ...,
-    }
-)
-```
-
-## Asking With Images
-
-```python
-from multimodal_agent.utils import load_image_as_part
-
-img = load_image_as_part("photo.jpg")
-resp = agent.ask_with_image("Describe this image", img)
-print(resp.text)
-```
-
-Enable RAG:
-
-```python
-agent = MultiModalAgent(enable_rag=True)
-agent.ask("First message")
-agent.ask("Second message referencing the first")
-```
-
-RAG stores:
-
-- chunked logs
-- embeddings
-- search similarity
-
-This makes your CLI "memory aware".
-
-## CLI Usage
+Exit with:
 
 ```bash
-agent
+exit
 ```
+## RAG (Retrieval-Augmented Generation)
+RAG is fully built in:
+- SQLite storage
+- Chunked messages
+- Embedding storage
+- Cosine-based similarity search
+- Used automatically during `ask()` and `chat()`
 
-Then interactive chat:
+Your DB lives at:
 
 ```bash
-You: hello
-Agent: ...
+~/.multimodal_agent/memory.db
 ```
-
-Quit:
+**To clear memory:**
+```bash
+agent clear
+```
+---
+### Run as a Server (FastAPI)
+Start server:
 
 ```bash
-You: exit
+agent server
 ```
+Runs at:
 
-### **Formatted output**
-
-<pre class="overflow-visible!" data-start="1928" data-end="1974"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent ask "write python </span><span>code</span><span>" </span><span>--format</span><span>
-</span></span></code></div></div></pre>
-
-Produces fenced, language-annotated code.
-
-## Token Usage Logging (v0.3.2)
-
-Multimodal-Agent can automatically record token usage for every request (text, JSON, or image-based).
-
-Usage logging is **enabled by default**.
-
-Each call writes a compact entry into:
 ```bash
-~/.multimodal_agent/usage.log
+http://127.0.0.1:8000
 ```
-
-### Example Log Entry
-2025-01-12T15:22:14Z | model=gemini-2.5-flash | prompt=42 | response=18 | total=60
-
-### Disable Usage Logging
-
-If you do not want any local logging:
-
-```python
-agent = MultiModalAgent(enable_rag=False)
-agent.usage_logging = False
+## API Reference (v0.5.0)
+### POST /ask
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "hello"}'
 ```
+Request:
 
-**Custom Log Path**
-
-```python
-agent.usage_log_path = "/path/to/your/custom.log"
+```json
+{
+  "prompt": "hello",
+  "response_format": null,
+  "session_id": null,
+  "no_rag": false
+}
 ```
+Response:
 
+```json
+{
+  "text": "hello",
+  "data": null,
+  "usage": { "prompt_tokens": 44, "response_tokens": 1, "total_tokens": 553 }
+}
+```
+### POST /ask_with_image
+```bash
+curl -X POST http://127.0.0.1:8000/ask_with_image \
+  -F "file=@test.jpg" \
+  -F "prompt=describe this"
+```
+### POST /generate
+```bash
+curl -X POST http://127.0.0.1:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "give me json", "json": true}'
+```
+### POST /memory/search
+```bash
+curl -X POST http://127.0.0.1:8000/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "hello", "limit": 5}'
+Returns ranked similar memory chunks:
+
+```json
+{
+  "results": [
+    [1.0, { "id": 331, "content": "hello", "role": "agent" }]
+  ]
+}
+```
+## Architecture Overview
+```bash
+multimodal_agent/
+    core/          # Agent logic
+    rag/           # SQLite store + embeddings
+    cli/           # Command-line interface
+    server/        # FastAPI server
+    utils/         # helper functions
+```
+Memory DB:
+```bash
+sessions  — chat sessions
+chunks    — tokenized text fragments
+embeddings — vector store
+```
 **JSON + Image Mode Support**
 Usage logging works seamlessly across:
-
-
 - ask()
 - ask_with_image()
 - response_format="json"
@@ -227,11 +217,10 @@ Supported types:
 
 Example output:
 
-<pre class="overflow-visible!" data-start="1236" data-end="1299"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-markdown"><span><span>```python
+<pre class="overflow-visible!" data-start="1236" data-end="1299"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-markdown"><span><span>
 def add(a, b):
     return a + b
-```</span></span></code></div></div></pre>
-
+</span></span></code></div></div></pre>
 ## **Language Detection (v0.4.0)**
 
 The formatter uses the internal `detect_language()` to identify code automatically.
@@ -256,40 +245,41 @@ Detected languages include:
 
 </span><span>print</span><span>(detect_language(</span><span>"fun greet(name: String)"</span><span>))  </span><span># → kotlin</span></span></code></div></div></pre>
 
-## Running Tests
+## **Agent server mode (v0.5.0)**
 
+- Full FastAPI server 
+
+- `/ask`, `/ask_with_image`, `/memory/search`, `/generate`
+
+- Production-ready RAG
+
+- CLI + server parity
+
+- Stable chunking
+
+- SQLite-backed memory
+
+- Fully tested (130+ passing tests)
+
+## Running Testing
 ```bash
 make test
 make coverage
 ```
+All tests reside in:
 
-Test coverage: ~91%
-
-## Architecture Overview
-
-agent_core.py — main agent logic
-
-chunking.py — text chunking & normalization
-
-embedding.py — embedding wrappers
-
-rag_store.py — vector search store
-
-cli.py — command line interface
-
-utils.py — image loading, memory, history helpers
+```bash
+src/multimodal_agent/tests
+```
+130+ tests, including server, RAG, embedding, core agent, and CLI.
 
 ## Roadmap
+v0.5.x - Improve server streaming and Authentication
 
-v0.3.2 — Token usage logging
+v0.6.0 - VS Code extension
 
-v0.4.0 — Formatting engine + language detection
 
-v0.5.0 — Agent server mode
 
-v0.6.0 — VS Code extension
-
-v1.0.0 — Website + demos + documentation
 
 # License
 

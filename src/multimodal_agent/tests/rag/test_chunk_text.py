@@ -1,4 +1,4 @@
-from multimodal_agent.chunking import (
+from multimodal_agent.rag.chunking import (
     _split_paragraphs,
     _split_sentences,
     chunk_text,

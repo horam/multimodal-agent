@@ -1,6 +1,7 @@
 import pytest
 
-from multimodal_agent.agent_core import MultiModalAgent, RetryableError
+from multimodal_agent.core.agent_core import MultiModalAgent
+from multimodal_agent.errors import RetryableError
 
 
 class DummyRetryable(Exception):

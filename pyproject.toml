@@ -1,6 +1,6 @@
 [project]
 name = "multimodal-agent"
-version = "0.4.0"
+version = "0.5.0"
 description = "A Python multimodal agent for interacting with Gemini models via text, images, and CLI."
 authors = [
     { name = "Horam", email = "horam.tech@google.com" }
@@ -36,7 +36,7 @@ dev = [
 ]
 
 [project.scripts]
-agent = "multimodal_agent.cli:main"
+agent = "multimodal_agent.cli.cli:main"
 
 [tool.black]
 line-length = 88

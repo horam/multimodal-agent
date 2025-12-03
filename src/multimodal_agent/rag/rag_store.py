@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from multimodal_agent.tokenizer import split_into_chunks
+from multimodal_agent.core.embedding import embed_text
+from multimodal_agent.core.tokenizer import split_into_chunks
 
 
 @dataclass
@@ -266,8 +267,14 @@ class SQLiteRAGStore(RAGStore):
         )
 
         rows = cursor.fetchall()
+        if isinstance(query_embedding, str):
+            # Raw text
+            q_embedding = self._embed_text(query_embedding, model=model)
+        else:
+            # Assume caller passed an embedding already
+            q_embedding = query_embedding
 
-        query_embedding = [float(x) for x in query_embedding]
+        query_embedding = [float(x) for x in q_embedding]
 
         scored: List[Tuple[float, int]] = []
         # compute cosine similarity and sort them based on the similarity
@@ -313,6 +320,15 @@ class SQLiteRAGStore(RAGStore):
             results.append((score, chunk))
 
         return results
+
+    def _embed_text(self, text: str, model: str):
+        """
+        Internal wrapper calling global embed_text() so the store
+        can embed queries the same way as stored chunks.
+        """
+
+        emb = embed_text(text, model=model)
+        return [float(x) for x in emb]
 
     def clear_all(self):
 

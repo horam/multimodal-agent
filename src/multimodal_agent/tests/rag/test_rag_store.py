@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from multimodal_agent.rag_store import Chunk, SQLiteRAGStore
+from multimodal_agent.rag.rag_store import Chunk, SQLiteRAGStore
 
 
 @pytest.fixture

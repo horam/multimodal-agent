@@ -22,7 +22,7 @@ def format_output(text: str) -> str:
 
     if content_type == "json":
         return format_json(text)
-    
+
     elif content_type == "code":
         language = detect_language(text)
         return f"```{language}\n{text.strip()}\n```"

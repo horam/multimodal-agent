@@ -3,18 +3,20 @@ import json
 import os
 import sys as system
 
+import uvicorn
 from dotenv import load_dotenv
 
 from multimodal_agent import __version__
-from multimodal_agent.agent_core import MultiModalAgent
-from multimodal_agent.utils import (
+from multimodal_agent.cli.history import (
     handle_history,
-    load_image_as_part,
     print_markdown_with_meta,
 )
-
-from .errors import AgentError, InvalidImageError
-from .logger import get_logger
+from multimodal_agent.core.agent_core import MultiModalAgent
+from multimodal_agent.errors import AgentError, InvalidImageError
+from multimodal_agent.logger import get_logger
+from multimodal_agent.utils import (
+    load_image_as_part,
+)
 
 # Load .env from the project root
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -69,6 +71,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     ask_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Return output as JSON.",
+    )
+
+    ask_parser.add_argument(
         "--session", type=str, default=None, help="Session ID for this query"
     )
 
@@ -92,6 +100,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--format",
         action="store_true",
         help="Format output syntax.",
+    )
+
+    image_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Return output as JSON.",
     )
 
     # agent command.
@@ -173,6 +187,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
     )
 
+    # server
+    server_parser = subparsers.add_parser(
+        "server",
+        help="Run agent API server",
+    )
+    server_parser.add_argument("--port", type=int, default=8000)
+
     return parser
 
 
@@ -240,8 +261,12 @@ def main():
         # asking question in text.
         if args.command == "ask":
             formatted = getattr(args, "format", False)
+            json_mode = getattr(args, "json", False)
+            response_format = "json" if json_mode else "text"
+
             response = agent.ask(
                 args.prompt,
+                response_format=response_format,
                 formatted=formatted,
             )
 
@@ -275,9 +300,12 @@ def main():
                 )
 
             formatted = getattr(args, "format", False)
+            json_mode = getattr(args, "json", False)
+            response_format = "json" if json_mode else "text"
             response = agent.ask_with_image(
                 args.prompt,
                 image_as_part,
+                response_format=response_format,
                 formatted=formatted,
             )
 
@@ -308,6 +336,14 @@ def main():
         # history mode.
         elif args.command == "history":
             return handle_history(args=args)
+
+        elif args.command == "server":
+            uvicorn.run(
+                "multimodal_agent.server:app",
+                host="127.0.0.1",
+                port=args.port,
+                reload=False,
+            )
 
     except AgentError as exception:
         logger.error(f"Agent failed: {exception}")

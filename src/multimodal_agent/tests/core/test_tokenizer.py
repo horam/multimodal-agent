@@ -1,6 +1,6 @@
 import pytest
 
-from multimodal_agent.tokenizer import (
+from multimodal_agent.core.tokenizer import (
     estimate_token_count,
     split_into_chunks,
 )

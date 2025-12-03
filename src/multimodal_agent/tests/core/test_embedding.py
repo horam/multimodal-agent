@@ -1,6 +1,6 @@
 import pytest
 
-from multimodal_agent import embedding as embedding_module
+from multimodal_agent.core import embedding as embedding_module
 
 
 @pytest.fixture
