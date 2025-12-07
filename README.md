@@ -1,105 +1,111 @@
 # **Multimodal-Agent**
 
-*A lightweight, production-ready multimodal wrapper for Google Gemini with optional RAG, image input, JSON mode, and a clean CLI.*
+*A lightweight, production-ready multimodal wrapper for Google Gemini with RAG, image input, JSON mode, project learning, session memory, and a clean CLI & server.*
 
 ---
 
 ## Features
 
+### Core LLM Capabilities
+
 - **Text generation**
 - **Image + text multimodal input**
-- **RAG memory store (SQLite)**
-- **Server mode (FastAPI)**
-- **Clean CLI (`agent`)**
-- **Retry logic + error handling**
-- **JSON mode**
-- **Token usage logging**
-- **Syntax-aware output formatting**
-- **Session-aware chat with persistent memory**
-- Added **Server API**, **full RAG flow**, **image upload**, **memory search**, and more.
+- **Response formatting (syntax-aware, v0.4.0+)**
+- **JSON mode with stable pretty-printing**
+- **Automatic language detection**
 
+### RAG + Memory
+
+- **SQLite vector store**
+- **Persistent conversation memory**
+- **Chunking + embedding storage**
+- **Cosine similarity search**
+- **Session-aware chat**
+- **`~/.multimodal_agent/memory.db`**
+
+### Server (FastAPI, v0.5.0+)
+
+* `/ask`
+* `/ask_with_image`
+* `/generate`
+* `/memory/search`
+* `/learn/project`
+* `/project_profiles/list`
+
+Includes:
+
+* Safe error handling
+* Offline fake-response mode
+* Test coverage for all endpoints
+
+### Development Tools (v0.6.0)
+
+* **Flutter / code project analysis**
+* **Project-style learning (auto-extract architecture, state management, linting, etc.)**
+* **Extensible foundation for VS Code & Flutter extension generators**
+
+---
 
 ## Installation
 
 ```bash
 pip install multimodal-agent
 ```
+
 Or local:
 
 ```bash
 pip install -e .
 ```
-Requires:
 
-- Python 3.10+
-
-- A Google API key `(GOOGLE_API_KEY)`
+Set your Google API key:
 
 ```bash
-export GOOGLE_API_KEY="your-key-here"
+export GOOGLE_API_KEY="your-key"
 ```
 
-Without a key, the package still works using offline FakeResponse for testing & debugging.
+**No API key?**
+
+The agent automatically falls back to **FakeResponse offline mode** for testing & debugging.
+
+---
 
 ## Quick Start
-**Text Question**
+### **Text Question**
+
 ```bash
 agent ask "hello"
 ```
-Output:
 
-```shell
-## Question
-hello
+### **Disable RAG**
 
-## Answer
-hello
-```
-**Disable RAG:**
 ```bash
 agent ask "hello" --no-rag
 ```
-**JSON mode**
+
+### **JSON mode**
+
 ```bash
 agent ask "give me json" --json
 ```
-## Image + Text Input
+
+### **Image + Text**
+
 ```bash
 agent image test.jpg "describe this"
 ```
-## Chat Mode (Persistent Memory)
+
+### **Chat (with persistent memory)**
+
 ```bash
 agent chat
 ```
 
-Features:
+---
 
-- Session aware
+### RAG (Built-in)
 
-- Stores conversation chunks
-
-- Embeds each message
-
-- Retrieves similar chunks (RAG)
-
-- Generates response
-
-- Logs usage
-
-Exit with:
-
-```bash
-exit
-```
-## RAG (Retrieval-Augmented Generation)
-RAG is fully built in:
-- SQLite storage
-- Chunked messages
-- Embedding storage
-- Cosine-based similarity search
-- Used automatically during `ask()` and `chat()`
-
-Your DB lives at:
+Your memory DB lives at:
 
 ```bash
 ~/.multimodal_agent/memory.db
@@ -108,178 +114,223 @@ Your DB lives at:
 ```bash
 agent clear
 ```
+
+RAG includes:
+
+* chunking
+* embeddings
+* cosine similarity
+* session grouping
+* project-learning style profiles (v0.6.0)
+
 ---
-### Run as a Server (FastAPI)
-Start server:
+
+### Project Learning (v0.6.0)
+
+The agent can scan a project and learn its structure.
+
+Example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/learn/project \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/path/to/flutter/project"}'
+```
+
+This extracts:
+
+* package name
+* architecture patterns
+* linting rules
+* state management
+* file counts
+* widget usage patterns
+* build_runner / freezed usage
+* and stores a **profile** in SQLite
+
+List learned profiles:
+
+```bash
+curl http://127.0.0.1:8000/project_profiles/list
+```
+
+---
+
+### Server Mode
+
+Start:
 
 ```bash
 agent server
 ```
+
 Runs at:
 
-```bash
+```
 http://127.0.0.1:8000
 ```
-## API Reference (v0.5.0)
-### POST /ask
+## API Reference (v0.6.0)
+## **POST /ask**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"prompt": "hello"}'
 ```
-Request:
 
-```json
-{
-  "prompt": "hello",
-  "response_format": null,
-  "session_id": null,
-  "no_rag": false
-}
-```
 Response:
 
 ```json
 {
   "text": "hello",
   "data": null,
-  "usage": { "prompt_tokens": 44, "response_tokens": 1, "total_tokens": 553 }
+  "usage": { "prompt_tokens": 44, "response_tokens": 3, "total_tokens": 553 }
 }
 ```
-### POST /ask_with_image
+## **POST /ask_with_image**
 ```bash
 curl -X POST http://127.0.0.1:8000/ask_with_image \
   -F "file=@test.jpg" \
   -F "prompt=describe this"
 ```
-### POST /generate
+### v0.6.0 Better Error Handling
+
+Failures now return:
+
+```json
+{
+  "text": "Image processing failed: 429 RESOURCE_EXHAUSTED ...",
+  "data": null,
+  "usage": {},
+  "error": true
+}
+```
+
+Never returns `text: null`.
+
+---
+
+## **POST /generate**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "give me json", "json": true}'
 ```
-### POST /memory/search
+
+---
+
+## **POST /memory/search**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/memory/search \
   -H "Content-Type: application/json" \
-  -d '{"query": "hello", "limit": 5}'
-Returns ranked similar memory chunks:
+  -d '{"query": "hello"}'
+```
+
+Response:
 
 ```json
 {
   "results": [
-    [1.0, { "id": 331, "content": "hello", "role": "agent" }]
+    [0.98, { "id": 1, "content": "hello", "role": "user" }]
   ]
 }
 ```
+
+---
+
+## **POST /learn/project**
+
+Returns a structured project profile:
+
+```json
+{
+  "status": "ok",
+  "project_id": "project:rope_simulation_using_flutter",
+  "profile": {
+    "package_name": "rope_simulation_using_flutter",
+    "architecture": {
+      "patterns": ["feature_first"],
+      "state_management": []
+    },
+    "dart_files_count": 3,
+    "widget_files_count": 2
+  }
+}
+```
+
+---
+
 ## Architecture Overview
 ```bash
 multimodal_agent/
-    core/          # Agent logic
-    rag/           # SQLite store + embeddings
-    cli/           # Command-line interface
-    server/        # FastAPI server
-    utils/         # helper functions
+    core/          # Main agent logic
+    rag/           # SQLite vector store
+    cli/           # CLI commands (`agent`)
+    server/        # FastAPI server implementation
+    utils/         # helpers
 ```
-Memory DB:
+
+### Memory schema:
+
 ```bash
-sessions  — chat sessions
-chunks    — tokenized text fragments
-embeddings — vector store
+sessions      # chat sessions
+chunks        # tokenized fragments
+embeddings    # vector embeddings
+projects      # project profiles (v0.6.0)
 ```
-**JSON + Image Mode Support**
-Usage logging works seamlessly across:
-- ask()
-- ask_with_image()
-- response_format="json"
-- offline FakeResponse mode
 
-Logging is  **silent** , non-blocking, and wrapped in safe try/except guards.
+---
 
-It never interferes with the agent and never breaks tests.
+## **Formatting Engine (v0.4.0+)**
 
-## **Formatting Engine (v0.4.0)**
+* Detects JSON, XML, HTML, code, python, kotlin, dart, js, swift …
+* Pretty-prints output
+* Auto-wraps in fenced code blocks
+* Optional in `agent.ask(formatted=True)`
 
-Multimodal-Agent now includes a robust formatter that automatically detects and beautifies output.
+---
 
-Supported types:
+## Running Tests
 
-* **JSON** → pretty-printed, stable formatting
-* **Code** → wrapped in triple backticks with detected language
-* **XML / HTML** → pretty printed
-* **Plain text** → normalized
-
-### Usage:
-
-<pre class="overflow-visible!" data-start="1133" data-end="1217"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>resp = agent.ask(</span><span>"write python code"</span><span>, formatted=</span><span>True</span><span>)
-</span><span>print</span><span>(resp.text)
-</span></span></code></div></div></pre>
-
-Example output:
-
-<pre class="overflow-visible!" data-start="1236" data-end="1299"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-markdown"><span><span>
-def add(a, b):
-    return a + b
-</span></span></code></div></div></pre>
-## **Language Detection (v0.4.0)**
-
-The formatter uses the internal `detect_language()` to identify code automatically.
-
-Detected languages include:
-
-* Python
-* JavaScript
-* Java
-* Kotlin
-* Swift
-* Objective-C
-* Dart
-* C++
-* JSON
-* XML/HTML
-* Plain text
-
-### Example:
-
-<pre class="overflow-visible!" data-start="1696" data-end="1828"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>from</span><span> multimodal_agent.formatting </span><span>import</span><span> detect_language
-
-</span><span>print</span><span>(detect_language(</span><span>"fun greet(name: String)"</span><span>))  </span><span># → kotlin</span></span></code></div></div></pre>
-
-## **Agent server mode (v0.5.0)**
-
-- Full FastAPI server 
-
-- `/ask`, `/ask_with_image`, `/memory/search`, `/generate`
-
-- Production-ready RAG
-
-- CLI + server parity
-
-- Stable chunking
-
-- SQLite-backed memory
-
-- Fully tested (130+ passing tests)
-
-## Running Testing
 ```bash
 make test
 make coverage
 ```
-All tests reside in:
 
-```bash
-src/multimodal_agent/tests
-```
-130+ tests, including server, RAG, embedding, core agent, and CLI.
+160+ tests cover:
+
+* server
+* embeddings
+* chat memory
+* RAG
+* CLI commands
+* project learning
+* JSON mode
+* offline fake mode
+
+---
 
 ## Roadmap
-v0.5.x - Improve server streaming and Authentication
 
-v0.6.0 - VS Code extension
+### **v0.6.x**
 
+* VS Code & JetBrains extension
+* Flutter extension (code generator + project insights)
 
+### **v0.7.x**
 
+* Streaming responses
+* Pluggable embedding backends (Gemini / local / offline)
+
+### **v1.0**
+
+* Stable API
+* Plugin ecosystem
+* Multi-language project analyzers
+
+---
 
 # License
 

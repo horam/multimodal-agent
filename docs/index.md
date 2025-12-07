@@ -1,16 +1,15 @@
-# Multimodal Agent
+# Multimodal-Agent
 
 A lightweight, production-ready wrapper around **Google Gemini** with:
+- Robust CLI(`agent`)
+- RAG memory
+- FastAPI server
+- Image + text mode
+- JSON mode
+- Project learning (v0.6.0)
+- Offline testing mode
 
-- Multimodal support (text + images)
-- Session-based conversational memory
-- SQLite-powered RAG vector store
-- High test coverage (90%+)
-- Robust CLI (`agent`)
-- Retry logic + error handling
-- Extensible architecture for plugins & tooling
-
-This documentation will guide you through:
+Latest version: **v0.6.0**
 
 ## Contents
 
@@ -24,9 +23,8 @@ This documentation will guide you through:
 
 - [Architecture Overview](architecture.md)
 - [Sessions](sessions.md)
-- [RAG Memory](rag.md)
+- [RAG System](rag.md)
 - [History Management](history.md)
-
 ### Advanced Features
 
 - [Response Metadata Schema](metadata_schema.md)
@@ -34,6 +32,8 @@ This documentation will guide you through:
 - [JSON response mode](json_mode.md)
 - [Token Usage Logging](token_usage.md)
 - [Chunk Normalization (Planned)](chunk_normalization.md)
+- [Server API](server.md)
+
 
 ### Development
 
@@ -42,48 +42,37 @@ This documentation will guide you through:
 - Coverage reports
 - Contributing
 
-## Version Highlights (v0.2.6)
+## Key Features
 
-- Added SQLite-backed RAG store
-- Added session-based memory
-- Added `agent history` commands
-- Updated schema for future usage
-- New docs for RAG and session management
+- Text generation
+- Image + text multimodal input
+- RAG with SQLite
+- Retry + backoff
+- Token logging
+- JSON output
+- Persistent session chat
+- Project-aware RAG (v0.6.0)
+- Server mode (FastAPI)
+- Syntax-aware code formatter
 
-## Why This Project Exists
+---
 
-This agent sits between **Gemini** and your applications to provide:
-
-- A clean interface
-- Safer, predictable behavior
-- Local memory without external services
-- Debuggable pipelines
-
-## 🚀 Quick Start
-
-Install:
+## Quick Install
 
 ```bash
 pip install multimodal-agent
 ```
-
-Ask a question:
-
-```bash
-agent ask "What is recursion?"
-```
-
-Start a chat session:
+With env key:
 
 ```bash
-agent chat --session my_chat
+export GOOGLE_API_KEY="your-key-here"
 ```
 
-Enable verbose metadata:
+### **Roadmap**
+- v0.5.x — server features, RAG stability
+- v0.6.0 — project learning, project profiles, improved image handling
+- v0.7.0 — Flutter extension (code generation + analysis)
 
-```bash
-agent ask "hello" --verbose
-```
 
 ## Need help?
 
