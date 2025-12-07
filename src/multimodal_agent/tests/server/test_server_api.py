@@ -127,7 +127,7 @@ def test_memory_search(monkeypatch):
     agent.enable_rag = True
 
     class FakeStore:
-        def search_similar(self, query, model, top_k):
+        def search_similar(self, query_embedding, model, top_k):
             return [
                 ("0.99", SimpleNamespace(content="hello")),
                 ("0.88", SimpleNamespace(content="world")),
@@ -185,3 +185,93 @@ def test_memory_summary_missing(monkeypatch):
 
     assert resp.status_code == 200
     assert data["summary"] == "Memory summarization not available."
+
+
+def test_chat_endpoint(monkeypatch):
+    def fake_ask(
+        prompt,
+        response_format=None,
+        session_id=None,
+        rag_enabled=True,
+    ):
+        return SimpleNamespace(
+            text=f"chat echo: {prompt}",
+            data={"ok": True},
+            usage={"total_tokens": 5},
+        )
+
+    monkeypatch.setattr(agent, "ask", fake_ask)
+
+    resp = client.post("/chat", json={"message": "hello"})
+    data = resp.json()
+
+    assert resp.status_code == 200
+    assert data["text"] == "chat echo: hello"
+    assert data["data"] == {"ok": True}
+    assert "usage" in data
+
+
+def test_image_endpoint(monkeypatch):
+    def fake_ask_with_image(prompt, image):
+        return SimpleNamespace(
+            text="image OK",
+            data={"detected": "cat"},
+            usage={"prompt_tokens": 1},
+        )
+
+    monkeypatch.setattr(agent, "ask_with_image", fake_ask_with_image)
+
+    img = io.BytesIO(b"\xff\xd8\xff\xd9")
+
+    resp = client.post(
+        "/image",
+        files={"file": ("pic.jpg", img, "image/jpeg")},
+        data={"prompt": "describe"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["text"] == "image OK"
+    assert data["data"] == {"detected": "cat"}
+
+
+def test_history_endpoint(monkeypatch):
+    class FakeChunk:
+        id = 1
+        role = "user"
+        session_id = "s1"
+        content = "hello"
+        created_at = "2025-12-01"
+        source = None
+
+    class FakeStore:
+        def get_recent_chunks(self, limit):
+            return [FakeChunk()]
+
+    monkeypatch.setattr(agent, "rag_store", FakeStore())
+
+    resp = client.get("/history?limit=10")
+    data = resp.json()
+
+    assert resp.status_code == 200
+    assert len(data["items"]) == 1
+    assert data["items"][0]["content"] == "hello"
+
+
+def test_history_summary_endpoint(monkeypatch):
+    def fake_summary(limit=50, session_id=None):
+        return "summary generated"
+
+    monkeypatch.setattr(
+        agent,
+        "summarize_history",
+        fake_summary,
+        raising=False,
+    )
+
+    resp = client.get("/history/summary?limit=10")
+    data = resp.json()
+
+    assert resp.status_code == 200
+    assert data["summary"] == "summary generated"

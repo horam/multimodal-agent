@@ -460,6 +460,18 @@ class MultiModalAgent:
         except Exception:
             return {"data": None, "__text__": text}
 
+    def store_project_profile(self, project_id: str, profile_dict: dict):
+        json_str = json.dumps(profile_dict, ensure_ascii=False)
+
+        self.rag_store.add_logical_message(
+            content=json_str,
+            role="project_profile",
+            session_id=project_id,
+            source="project-learning",
+        )
+
+        return True
+
     # Chat mode.
     def chat(
         self,
@@ -493,7 +505,7 @@ class MultiModalAgent:
             # remove leading and trailing white spaces.
             user_input = input("You: ").strip()
 
-            if user_input.lower() == "exit":
+            if _is_exit_command(user_input.lower()):
                 self.logger.info("Chat ended. Goodbye!")
                 break
 
@@ -607,3 +619,7 @@ class MultiModalAgent:
 
             # print answer
             self.logger.info(f"Agent: {answer}")
+
+
+def _is_exit_command(text: str) -> bool:
+    return text.strip().lower() in ("exit", "exit()", "quit", "quit()")

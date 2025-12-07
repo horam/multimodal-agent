@@ -1,5 +1,6 @@
 import json
 import math
+import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,13 +108,24 @@ class RAGStore:
 
 
 class SQLiteRAGStore(RAGStore):
-    def __init__(self, db_path: Optional[str | Path] = None) -> None:
+    def __init__(
+        self,
+        db_path: Optional[str | Path] = None,
+        check_same_thread=True,
+    ) -> None:
         if db_path is None:
-            db_path = default_db_path()
+            env_path = os.environ.get("MULTIMODAL_AGENT_DB")
+            if env_path:
+                db_path = Path(env_path)
+            else:
+                db_path = default_db_path()
         self.db_path = db_path
 
         # Cli has one connection per process
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(
+            self.db_path,
+            check_same_thread=check_same_thread,
+        )
         self.conn.row_factory = sqlite3.Row
         self._init_db()
 
@@ -196,15 +208,24 @@ class SQLiteRAGStore(RAGStore):
 
     def get_recent_chunks(self, limit: int = 50) -> List[Chunk]:
         cursor = self.conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, session_id, role, content, created_at, source
-            FROM chunks
-            ORDER BY created_at DESC, id ASC
-            LIMIT ?
-            """,
-            (limit,),
-        )
+        if limit is None:
+            cursor.execute(
+                """
+                SELECT id, session_id, role, content, created_at, source
+                FROM chunks
+                ORDER BY created_at DESC, id ASC;
+                """
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, session_id, role, content, created_at, source
+                FROM chunks
+                ORDER BY created_at DESC, id ASC
+                LIMIT ?
+                """,
+                (limit,),
+            )
         rows = cursor.fetchall()
         return [
             Chunk(
@@ -351,6 +372,33 @@ class SQLiteRAGStore(RAGStore):
             (chunk_id,),
         )
         self.conn.commit()
+
+    def get_project_profiles(self):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT session_id, content, created_at
+            FROM chunks
+            WHERE role='project_profile'
+            ORDER BY created_at DESC
+        """
+        )
+        return cursor.fetchall()
+
+    def load_project_profile(self, project_id: str):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT content FROM chunks
+            WHERE session_id=? AND role='project_profile'
+            ORDER BY created_at DESC LIMIT 1
+        """,
+            (project_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return json.loads(row["content"])
 
     def close(self) -> None:
         self.conn.close()

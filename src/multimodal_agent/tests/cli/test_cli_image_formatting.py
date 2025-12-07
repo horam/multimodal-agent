@@ -1,7 +1,7 @@
 import sys
 from unittest.mock import patch
 
-from multimodal_agent.cli import cli
+import multimodal_agent.cli.cli as cli
 from multimodal_agent.core.agent_core import AgentResponse, MultiModalAgent
 
 

@@ -2,7 +2,7 @@ import pytest
 
 import multimodal_agent.rag.rag_store as rag_mod
 from multimodal_agent.core.agent_core import MultiModalAgent
-from multimodal_agent.rag.rag_store import RAGStore
+from multimodal_agent.rag import RAGStore
 
 
 @pytest.fixture

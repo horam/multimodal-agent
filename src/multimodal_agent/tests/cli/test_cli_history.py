@@ -2,81 +2,84 @@ import sys as system
 import types
 from types import SimpleNamespace
 
-import multimodal_agent.utils as utils
-from multimodal_agent.cli import cli
+import multimodal_agent.cli.cli as cli
 
 
-def make_fake_store(chunks=None):
+def make_store(chunks=None):
     return types.SimpleNamespace(
-        get_recent_chunks=lambda limit: chunks or [],
-        get_recent_chunk=lambda limit: chunks or [],
-        delete_chunk=lambda chunk_id: None,
+        get_recent_chunks=lambda limit=None: chunks or [],
+        delete_chunk=lambda chunk_id=None: None,
         clear_all=lambda: None,
         close=lambda: None,
     )
 
 
 def test_cli_history_show_empty(monkeypatch, capsys):
-    fake_store = make_fake_store([])
-    monkeypatch.setattr(utils, "SQLiteRAGStore", lambda *a, **k: fake_store)
-
+    store = make_store([])
+    monkeypatch.setattr(
+        "multimodal_agent.cli.cli.SQLiteRAGStore", lambda *a, **k: store
+    )
     monkeypatch.setattr(system, "argv", ["agent", "history", "show"])
     cli.main()
-    output = capsys.readouterr().out
-    assert "No history" in output
+    print("output:", capsys.readouterr().out)
+    assert "No history" in capsys.readouterr().out
 
 
 def test_cli_history_delete(monkeypatch, capsys):
-    events = {"deleted": None}
 
-    fake_store = make_fake_store()
-    fake_store.delete_chunk = lambda chunk_id: events.update(deleted=chunk_id)
+    store = make_store()
+    store.delete_chunk = lambda **kw: None
 
-    monkeypatch.setattr(utils, "SQLiteRAGStore", lambda *a, **k: fake_store)
+    monkeypatch.setattr(
+        "multimodal_agent.rag.rag_store.SQLiteRAGStore",
+        lambda *a, **k: store,
+    )
+
     monkeypatch.setattr(system, "argv", ["agent", "history", "delete", "2"])
     cli.main()
+    out = capsys.readouterr().out
 
-    assert events["deleted"] == 2
+    assert "Deleted chunk 2" in out
+    assert '"chunk_id": 2' in out  # also appears in JSON footer
 
 
 def test_cli_history_reset(monkeypatch, capsys):
-    # reset is now "clear" because memory.json was removed
-    fake_store = make_fake_store()
-    monkeypatch.setattr(utils, "SQLiteRAGStore", lambda *a, **k: fake_store)
+    store = make_store()
+    monkeypatch.setattr(
+        "multimodal_agent.rag.rag_store.SQLiteRAGStore", lambda *a, **k: store
+    )
 
     monkeypatch.setattr(system, "argv", ["agent", "history", "clear"])
     cli.main()
-
-    out = capsys.readouterr().out
-    assert "History cleared" in out
+    assert "History cleared" in capsys.readouterr().out
 
 
 def test_cli_history_summary(monkeypatch, capsys, mocker):
     chunk = SimpleNamespace(
         id=1,
         role="user",
-        session_id="s1",
+        session_id="s",
         content="hello",
-        created_at="2024-01-01",
+        created_at="2024",
     )
-    fake_store = make_fake_store([chunk])
+    store = make_store([chunk])
 
-    monkeypatch.setattr(utils, "SQLiteRAGStore", lambda *a, **k: fake_store)
+    monkeypatch.setattr(
+        "multimodal_agent.cli.cli.SQLiteRAGStore",
+        lambda *a, **k: store,
+    )
 
-    # Fake summarizer agent
     class FakeAgent:
         def __init__(self, *a, **k):
             pass
 
         def safe_generate_content(self, contents):
-            class R:
-                text = "summary ok"
+            return (SimpleNamespace(text="summary ok"), {"prompt_tokens": 0})
 
-            return R()
-
-    mocker.patch("multimodal_agent.utils.MultiModalAgent", FakeAgent)
+    mocker.patch("multimodal_agent.core.agent_core.MultiModalAgent", FakeAgent)
 
     monkeypatch.setattr(system, "argv", ["agent", "history", "summary"])
     cli.main()
-    output = capsys.readouterr().out
-    assert "summary ok" in output
+    out = capsys.readouterr().out
+    print("out is: ", out)
+    assert "summary ok" in out

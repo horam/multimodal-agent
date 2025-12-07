@@ -1,7 +1,7 @@
-import sys
+import sys as system
 from unittest.mock import patch
 
-from multimodal_agent.cli import cli
+from multimodal_agent.cli.cli import main
 from multimodal_agent.core.agent_core import AgentResponse, MultiModalAgent
 
 
@@ -28,12 +28,12 @@ def fake_ask(
 @patch.object(MultiModalAgent, "ask", fake_ask)
 def test_cli_formatting_flag(monkeypatch, capsys):
     monkeypatch.setattr(
-        sys,
+        system,
         "argv",
         ["agent", "ask", "test", "--format"],
     )
 
-    cli.main()
+    main()
 
     output = capsys.readouterr().out.strip()
 

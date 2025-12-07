@@ -1,14 +1,12 @@
-from multimodal_agent import utils
 from multimodal_agent.cli.printing import print_markdown_with_meta
-from multimodal_agent.rag.rag_store import default_db_path
+from multimodal_agent.rag import SQLiteRAGStore
 
 
 #   HISTORY HANDLERS (RAG-Backed, Session-Aware)
-def handle_history(args) -> int:
+def handle_history(args, store) -> int:
     """
     Dispatch RAG history operations.
     """
-    store = utils.SQLiteRAGStore(default_db_path())
     try:
         if args.history_cmd == "show":
             return _show_history(args, store)
@@ -25,15 +23,19 @@ def handle_history(args) -> int:
         store.close()
 
 
-def _show_history(args, store: utils.SQLiteRAGStore) -> int:
+def _show_history(args, store: SQLiteRAGStore) -> int:
     """
     Show stored history from RAG SQLite database.
     """
-    chunks = store.get_recent_chunks(limit=args.limit)
+    limit = args.limit if args.limit is not None else 1000
+    chunks = store.get_recent_chunks(limit=limit)
 
     # Filter by session
     if getattr(args, "session", None):
         chunks = [c for c in chunks if c.session_id == args.session]
+
+    if getattr(args, "clean", False):
+        chunks = [c for c in chunks if not _is_noise_chunk(c)]
 
     if not chunks:
         print_markdown_with_meta(
@@ -59,7 +61,7 @@ def _show_history(args, store: utils.SQLiteRAGStore) -> int:
         preview = chunk.content[:200]
         lines.append(preview)
         if len(chunk.content) > 200:
-            print("  ...")
+            lines.append(" ...")
         lines.append("---")
 
     body = "\n".join(lines)
@@ -77,7 +79,7 @@ def _show_history(args, store: utils.SQLiteRAGStore) -> int:
     return 0
 
 
-def _clear_history(args, store: utils.SQLiteRAGStore) -> int:
+def _clear_history(args, store: SQLiteRAGStore) -> int:
     store.clear_all()
     print_markdown_with_meta(
         sections=[("History", "History cleared.")],
@@ -86,7 +88,8 @@ def _clear_history(args, store: utils.SQLiteRAGStore) -> int:
     return 0
 
 
-def _delete_history(args, store: utils.SQLiteRAGStore) -> int:
+def _delete_history(args, store: SQLiteRAGStore) -> int:
+    print(args)
     store.delete_chunk(chunk_id=args.chunk_id)
     print_markdown_with_meta(
         sections=[("History", f"Deleted chunk {args.chunk_id}.")],
@@ -98,11 +101,13 @@ def _delete_history(args, store: utils.SQLiteRAGStore) -> int:
     return 0
 
 
-def _summary_history(args, store: utils.SQLiteRAGStore) -> int:
+def _summary_history(args, store: SQLiteRAGStore) -> int:
     """
     Summarize recent history using the LLM.
     """
-    chunks = store.get_recent_chunks(limit=args.limit)
+    # Get recent chunks, if user has not defined limit, fetch all chunks.
+    limit = args.limit if args.limit is not None else None
+    chunks = store.get_recent_chunks(limit=limit)
 
     # Optional filtering
     if getattr(args, "session", None):
@@ -119,27 +124,45 @@ def _summary_history(args, store: utils.SQLiteRAGStore) -> int:
         )
         return 0
 
-    # Format history
-    text = "\n".join(
-        f"{'User' if ch.role=='user' else 'Assistant'}: {ch.content}"
-        for ch in reversed(chunks)
+    clean_chunks = [c for c in chunks if not _is_noise_chunk(c)]
+
+    if not clean_chunks:
+        print_markdown_with_meta(
+            sections=[("Summary", "No meaningful history to summarize.")],
+            meta={
+                "type": "history_summary",
+                "limit": args.limit,
+                "session": getattr(args, "session", None),
+            },
+        )
+        return 0
+
+    lines = []
+    for chunk in clean_chunks:
+        role = {
+            "user": "User",
+            "agent": "Assistant",
+        }.get(chunk.role, chunk.role.capitalize())
+
+        lines.append(f"{role}: {chunk.content}")
+
+    transcript = "\n".join(lines)
+    # Summarization prompt
+    summarization_prompt = (
+        "Summarize the following conversation in a concise, coherent way:\n\n"
+        + transcript
     )
 
-    # Use the same model as CLI
-    agent = utils.MultiModalAgent(
-        enable_rag=False,
-        model=getattr(args, "model", "gemini-2.5-flash"),
-    )
+    # To avoid circular dependency
+    from multimodal_agent.core.agent_core import MultiModalAgent
 
-    # Call safe_generate_content directly so FakeAgent works during tests
-    response = agent.safe_generate_content(
-        [f"Summarize the following conversation:\n{text}"]
-    )
+    agent = MultiModalAgent(enable_rag=False)
+    response, usage = agent.safe_generate_content(summarization_prompt)
 
-    summary = response.text
+    text = getattr(response, "text", str(response))
 
     print_markdown_with_meta(
-        sections=[("Summary", summary)],
+        sections=[("Summary", text)],
         meta={
             "type": "history_summary",
             "limit": args.limit,
@@ -147,3 +170,36 @@ def _summary_history(args, store: utils.SQLiteRAGStore) -> int:
         },
     )
     return 0
+
+
+# NEW — Option B Noise Filter
+def _is_noise_chunk(chunk):
+    """
+    Smart noise filter (Option B):
+      - keep all messages except obvious noise.
+      - we do NOT remove future tool/system roles needed for extensions.
+    """
+
+    c = chunk.content or ""
+
+    # Never treat normal user messages as noise
+    if chunk.role == "user":
+        return False
+
+    # Ignore tests and fake responses
+    if c.startswith("FAKE_RESPONSE"):
+        return True
+
+    # Ignore project scanning noise from test suite
+    if chunk.role == "project_profile":
+        return True
+
+    # Empty or whitespace-only content
+    if not c.strip():
+        return True
+
+    # Extremely short meaningless messages
+    if c.strip() in {"hello", "hi", "reply", "mocked response"}:
+        return True
+
+    return False

@@ -6,13 +6,24 @@ from google.genai.types import Part
 from PIL import Image
 
 # Backward compatibility for test suite
-from multimodal_agent.core.agent_core import MultiModalAgent  # noqa
 from multimodal_agent.errors import InvalidImageError
-from multimodal_agent.rag.rag_store import SQLiteRAGStore  # noqa
+
+
+# Lazy proxy to allow monkeypatching in tests
+class _MultiModalAgentProxy:
+    def __call__(self, *args, **kwargs):
+        from multimodal_agent.core.agent_core import MultiModalAgent
+
+        return MultiModalAgent(*args, **kwargs)
+
+
+MultiModalAgent = _MultiModalAgentProxy()
+
 
 __all__ = [
-    "SQLiteRAGStore",
     "MultiModalAgent",
+    "load_image_as_part",
+    "load_image_from_url_as_part",
 ]
 
 

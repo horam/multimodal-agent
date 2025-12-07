@@ -78,9 +78,9 @@ def test_summary_history(mocker, fake_store, capsys):
             pass
 
         def safe_generate_content(self, contents):
-            return SimpleNamespace(text="summary text")
+            return (SimpleNamespace(text="summary text"), {"prompt_tokens": 0})
 
-    mocker.patch("multimodal_agent.utils.MultiModalAgent", FakeAgent)
+    mocker.patch("multimodal_agent.core.agent_core.MultiModalAgent", FakeAgent)
 
     args = SimpleNamespace(limit=10, session=None)
     _summary_history(args, fake_store)

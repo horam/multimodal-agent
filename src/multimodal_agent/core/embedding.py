@@ -4,6 +4,8 @@ from google import genai
 
 _embedding_client = None
 
+DEFAULT_EMBED_MODEL = "text-embedding-004"
+
 
 def get_embedding_client():
     """
@@ -32,7 +34,7 @@ def get_embedding_client():
     return _embedding_client
 
 
-def embed_text(text: str, model: str = "text-embedding-004") -> List[float]:
+def embed_text(text: str, model: str = DEFAULT_EMBED_MODEL) -> List[float]:
     """
     Embed text using any available backend:
 
@@ -42,6 +44,9 @@ def embed_text(text: str, model: str = "text-embedding-004") -> List[float]:
 
     Always returns a flat Python list of floats.
     """
+
+    if model is None:
+        model = DEFAULT_EMBED_MODEL
     client = get_embedding_client()
 
     # Offline fallback: client has no real embedding API
