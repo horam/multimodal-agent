@@ -3,11 +3,13 @@ import json
 import os
 
 import uvicorn
+import yaml
 from dotenv import load_dotenv
 
 from multimodal_agent.cli.history import handle_history
 from multimodal_agent.cli.printing import print_markdown_with_meta
-from multimodal_agent.errors import AgentError, InvalidImageError
+from multimodal_agent.config import get_config, set_config_field
+from multimodal_agent.errors import AgentError
 from multimodal_agent.logger import get_logger
 from multimodal_agent.project_scanner import (
     scan_project,
@@ -216,43 +218,142 @@ def build_parser() -> argparse.ArgumentParser:
     )
     server_parser.add_argument("--port", type=int, default=8000)
 
+    # config
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage agent configuration",
+    )
+    config_sub = config_parser.add_subparsers(dest="config_cmd")
+
+    # agent config set-key <key>
+    set_key = config_sub.add_parser("set-key", help="Set API key")
+    set_key.add_argument("key")
+
+    # agent config set-model <model>
+    set_model = config_sub.add_parser("set-model", help="Set model")
+    set_model.add_argument(
+        "model",
+        help="Model name to save as chat model",
+    )
+
+    # agent config set-image-model
+    set_image_model = config_sub.add_parser(
+        "set-image-model",
+        help="set the image model",
+    )
+
+    set_image_model.add_argument(
+        "model",
+        help="Model name to save as image model",
+    )
+
+
+    # agent config set-embed-model
+    set_embed_model = config_sub.add_parser(
+        "set-embed-model",
+        help="set the embedding model",
+    )
+    set_embed_model.add_argument(
+        "model",
+        help="Model name to save as embedding model",
+    )
+
+    # agent config show
+    config_sub.add_parser("show", help="Show current config")
+
     return parser
 
 
-def handle_text(agent, question, debug=False, response_format="text"):
-    response = agent.ask(question, response_format=response_format)
-
-    if response_format == "json":
-        print(json.dumps(response.data, indent=2))
-    else:
-        print(response.text)
-
-    if response.usage and debug:
-        print(
-            f"[usage] prompt={response.usage.get('prompt_tokens')} "
-            f"response={response.usage.get('response_tokens')} "
-            f"total={response.usage.get('total_tokens')}"
+def handle_text(
+    agent,
+    question,
+    debug=False,
+    response_format="text",
+    formatted: bool = False,
+):
+    try:
+        response = agent.ask(
+            question,
+            response_format=response_format,
+            formatted=formatted,
         )
+    except Exception as e:
+        logger.error(f"[ask] Model failed: {e}")
+        print("Error: model failed to generate an answer.")
+        return 1
 
+    # chat output.
+    if hasattr(response, "text"):
+        text = response.text
+    else:
+        text = str(response)
 
-def handle_image(agent, image, question, debug=False, response_format="text"):
-    response = agent.ask_with_image(
-        question,
-        image,
-        response_format=response_format,
+    print_markdown_with_meta(
+        sections=[
+            ("Question", question),
+            ("Answer", text),
+        ],
+        meta={
+            "type": "ask",
+            "command": "ask",
+        },
     )
 
-    if response_format == "json":
-        print(json.dumps(response.data, indent=2))
-    else:
-        print(response.text)
-
-    if response.usage and debug:
+    if debug and hasattr(response, "usage") and response.usage:
         print(
             f"[usage] prompt={response.usage.get('prompt_tokens')} "
             f"response={response.usage.get('response_tokens')} "
             f"total={response.usage.get('total_tokens')}"
         )
+
+    return 0
+
+
+def handle_image(
+    agent,
+    image,
+    question,
+    debug=False,
+    response_format="text",
+    formatted: bool = False,
+):
+    try:
+        response = agent.ask_with_image(
+            question,
+            image,
+            response_format=response_format,
+            formatted=formatted,
+        )
+    except Exception as e:
+        logger.error(f"[image] Model failed: {e}")
+        print("Error: model failed to generate an answer.")
+        return 1
+
+    # Extract text
+    if hasattr(response, "text"):
+        text = response.text
+    else:
+        text = str(response)
+
+    print_markdown_with_meta(
+        sections=[
+            ("Question", question),
+            ("Answer", text),
+        ],
+        meta={
+            "type": "image",
+            "command": "image",
+        },
+    )
+
+    if debug and hasattr(response, "usage") and response.usage:
+        print(
+            f"[usage] prompt={response.usage.get('prompt_tokens')} "
+            f"response={response.usage.get('response_tokens')} "
+            f"total={response.usage.get('total_tokens')}"
+        )
+
+    return 0
 
 
 def test_main(argv=None):
@@ -310,73 +411,39 @@ def _main(args, parser):
             json_mode = getattr(args, "json", False)
             response_format = "json" if json_mode else "text"
 
-            response = agent.ask(
-                args.prompt,
+            return handle_text(
+                agent,
+                question=args.prompt,
+                debug=args.debug,
                 response_format=response_format,
                 formatted=formatted,
             )
-
-            # chat output.
-            if hasattr(response, "text"):
-                text = response.text
-            else:
-                text = str(response)
-
-            print_markdown_with_meta(
-                sections=[
-                    ("Question", args.prompt),
-                    ("Answer", text),
-                ],
-                meta={
-                    "type": "ask",
-                    "command": "ask",
-                    "model": args.model,
-                    "rag_enabled": enable_rag,
-                },
-            )
-
-            return 0
         # Image questions.
         elif args.command == "image":
+
             try:
                 image_as_part = load_image_as_part(args.image_path)
-            except Exception:
-                raise InvalidImageError(
-                    f"Cannot read image: {args.image_path}",
+            except Exception as exception:
+                logger.error(
+                    f"Cannot read image: {args.image_path}: {exception}",
                 )
+                print("Error: could not load image.")
+                return 1
 
             formatted = getattr(args, "format", False)
             json_mode = getattr(args, "json", False)
             response_format = "json" if json_mode else "text"
-            response = agent.ask_with_image(
-                args.prompt,
-                image_as_part,
+            return handle_image(
+                agent,
+                image=image_as_part,
+                question=args.prompt,
+                debug=args.debug,
                 response_format=response_format,
                 formatted=formatted,
             )
 
-            # chat output.
-            if hasattr(response, "text"):
-                text = response.text
-            else:
-                text = str(response)
-            print_markdown_with_meta(
-                sections=[
-                    ("Question", args.prompt),
-                    ("Answer", text),
-                ],
-                meta={
-                    "type": "image",
-                    "command": "image",
-                    "model": args.model,
-                    "rag_enabled": enable_rag,
-                    "image_path": args.image_path,
-                },
-            )
-            return 0
-
         # chat mode.
-        if args.command == "chat":
+        elif args.command == "chat":
             agent.chat(session_id=args.session)
             return 0
 
@@ -441,6 +508,32 @@ def _main(args, parser):
             profile = scan_project(args.path)
             print(json.dumps(profile.to_dict(), indent=2))
             return 0
+
+        elif args.command == "config":
+
+            if args.config_cmd == "set-key":
+                set_config_field("api_key", args.key)
+                print("API key updated.")
+                return 0
+
+            if args.config_cmd == "set-model":
+                set_config_field("chat_model", args.model)
+                print(f"Model updated to {args.model}")
+                return 0
+            
+            if args.config_cmd == "set-image-model":
+                set_config_field("image_model", args.model)
+                print(f"Image model updated to {args.model}")
+                return 0
+            if args.config_cmd == "set-embed-model":  
+                set_config_field("embedding_model", args.model)
+                print(f"Embedding model updated to {args.model}")
+                return 0  
+                
+
+            if args.config_cmd == "show":
+                print(yaml.dump(get_config(), sort_keys=False))
+                return 0
 
     except AgentError as exception:
         logger.error(f"Agent failed: {exception}")

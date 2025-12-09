@@ -53,10 +53,17 @@ def test_chat_history_format(mock_agent, mocker):
     mock_agent.chat()
 
 
+class DummyModels:
+    @staticmethod
+    def generate_content(*args, **kwargs):
+        raise RuntimeError("Dummy client: no API key available.")
+
+
 class DummyClientNoModels:
     """Client with no .models attribute → forces OFFLINE mode."""
 
-    pass
+    def __init__(self):
+        self.models = DummyModels()
 
 
 class FakeUsageResponse:
@@ -105,27 +112,20 @@ class FakeRAGStore:
         return []
 
 
-# -------------------------------------------------------------------
-# __init__ DummyClient branch (lines 54–62)
-# -------------------------------------------------------------------
-
-
 def test_agent_init_uses_dummy_client_when_no_api_key(monkeypatch):
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
 
+    # IMPORTANT: config may contain an api_key → must neutralize it
+    monkeypatch.setattr(agent_core, "get_config", lambda: {})
+
     agent = MultiModalAgent(client=None, enable_rag=False, rag_store=None)
 
-    # Should be the inner DummyClient defined in __init__
     assert hasattr(agent.client, "models")
     with pytest.raises(RuntimeError):
         agent.client.models.generate_content(model="x", contents=["y"])
 
 
-# -------------------------------------------------------------------
-# ask_with_image JSON path + _parse_json_output exception (213–219)
-# -------------------------------------------------------------------
-
-
+# ask_with_image JSON path + _parse_json_output exception
 def test_ask_with_image_json_parse_error_falls_back_to_none(monkeypatch):
     # Online mode client
     monkeypatch.setenv("GOOGLE_API_KEY", "dummy-key")

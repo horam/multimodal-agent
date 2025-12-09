@@ -4,10 +4,11 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from google import genai
+from google.genai import Client
 from google.genai.types import HttpOptions, Part
 
 from multimodal_agent.cli.formatting import format_output
+from multimodal_agent.config import get_config
 from multimodal_agent.core.embedding import embed_text
 from multimodal_agent.rag.rag_store import (
     RAGStore,
@@ -50,30 +51,47 @@ class MultiModalAgent:
         enable_rag: bool = True,
         embedding_model: str = "text-embedding-004",
     ):
+        # init logging
         self.logger = get_logger(__name__)
         self.logger.info("Initializing MultiModal agent...")
 
-        self.model = model
+        # set up config.
+        config = get_config()
+        config_chat_model = config.get("chat_model", "gemini-2.0-flash")
+        config_image_model = config.get("image_model", config_chat_model)
+        config_embedding_model = config.get("embedding_model", embedding_model)
+
+        self.model = model or config_chat_model
+        self.embedding_model = config_embedding_model
+        self.image_model = config_image_model
+        # set api key.
+        api_key = os.environ.get("GOOGLE_API_KEY") or config.get("api_key")
+
+        # Normalize empty strings to None.
+        if not api_key or str(api_key).strip() == "":
+            api_key = None
+
+        self.api_key = api_key
 
         if client is not None:
             self.client = client
         else:
-            api_key = os.getenv("GOOGLE_API_KEY")
-            if not api_key:
-                # In CI or local without key, use dummy client
-
-                self.client = DummyClient()
-            else:
-                self.client = genai.Client(
+            if self.api_key:
+                self.client = Client(
                     http_options=HttpOptions(api_version=api_version),
+                    api_key=api_key,
                 )
+            else:
+                # In CI or local without key, use dummy client
+                self.client = DummyClient()
 
+        # rag store.
         self.rag_store: RAGStore | None = rag_store or SQLiteRAGStore(
             db_path=default_db_path(),
         )
         self.enable_rag = enable_rag
-        self.embedding_model = embedding_model
 
+        # usage logging.
         self.usage_logging = True
         self.usage_log_path = os.path.expanduser(
             "~/.multimodal_agent/usage.log",
@@ -89,7 +107,7 @@ class MultiModalAgent:
         base_delay: int = 1,
         response_format: str = "text",
     ):
-        api_key = os.environ.get("GOOGLE_API_KEY")
+        api_key = self.api_key
         # Identify when user is real google client.
         is_real_google_client = (
             hasattr(self.client, "models")
@@ -449,6 +467,7 @@ class MultiModalAgent:
             # usage logging must never crash the agent.
             pass
 
+    @staticmethod
     def try_parse_json(text):
         # Remove ```json fences
         if text.strip().startswith("```"):

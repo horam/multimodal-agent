@@ -8,41 +8,40 @@
 
 ### Core LLM Capabilities
 
-- **Text generation**
-- **Image + text multimodal input**
-- **Response formatting (syntax-aware, v0.4.0+)**
-- **JSON mode with stable pretty-printing**
-- **Automatic language detection**
+* Unified agent for **text, image, and chat** interactions
+* Clean  **CLI** : `agent ask`, `agent image`, `agent chat`, `agent history`, `agent learn-project`
+* Supports  **Gemini 2.5-flash** ,  **1.5-flash** , and any future model (configurable)
+* Automatic **retry logic with exponential backoff**
+* Full offline mode support (`FAKE_RESPONSE`) when no API key is available
+* Detailed  **usage logging** : prompt, response, and total token counts
 
-### RAG + Memory
+### **RAG + Memory**
 
-- **SQLite vector store**
-- **Persistent conversation memory**
-- **Chunking + embedding storage**
-- **Cosine similarity search**
-- **Session-aware chat**
-- **`~/.multimodal_agent/memory.db`**
+* Local SQLite **RAGStore** (no cloud dependency)
+* Automatic memory saving of past chats
+* Project learning: let the agent read source code & architecture
+* Project introspection commands: `learn-project`, `show-project`, `inspect-project`
 
-### Server (FastAPI, v0.5.0+)
+### **Configuration System**
 
-* `/ask`
-* `/ask_with_image`
-* `/generate`
-* `/memory/search`
-* `/learn/project`
-* `/project_profiles/list`
+* User config stored at: `~/.multimodal_agent/config.yaml`
+* Configure models individually:
+  * `chat_model`
+  * `image_model`
+  * `embedding_model`
+* New CLI commands:
+  * `agent config set-model <model>`
+  * `agent config set-image-model <model>`
+  * `agent config set-embed-model <model>`
+  * `agent config set-key <API_KEY>`
 
-Includes:
+### **Developer Experience**
 
-* Safe error handling
-* Offline fake-response mode
-* Test coverage for all endpoints
-
-### Development Tools (v0.6.0)
-
-* **Flutter / code project analysis**
-* **Project-style learning (auto-extract architecture, state management, linting, etc.)**
-* **Extensible foundation for VS Code & Flutter extension generators**
+* pytest fixtures for offline/fake mode
+* High test coverage rate
+* Type-safe `AgentResponse`
+* Extensible architecture
+* Easy to embed into apps or scripts
 
 ---
 
@@ -58,29 +57,64 @@ Or local:
 pip install -e .
 ```
 
-Set your Google API key:
+---
+
+# Configuration
+
+### Show current configuration:
 
 ```bash
-export GOOGLE_API_KEY="your-key"
+agent config show
 ```
 
-**No API key?**
+### Set API key:
 
-The agent automatically falls back to **FakeResponse offline mode** for testing & debugging.
+```bash
+agent config set-key YOUR_KEY
+```
+
+### Set chat model:
+
+```bash
+agent config set-model gemini-2.5-flash
+```
+
+### Set image model:
+
+```bash
+agent config set-image-model gemini-1.5-flash
+```
+
+### Set embedding model:
+
+```bash
+agent config set-embed-model text-embedding-004
+```
+
+Your config file after updates:
+
+```bash
+local_learning: true
+chat_model: gemini-2.5-flash
+image_model: gemini-2.0-flash
+embedding_model: text-embedding-004
+api_key: YOUR_KEY
+```
 
 ---
 
 ## Quick Start
+
 ### **Text Question**
 
 ```bash
-agent ask "hello"
+agent ask "What is the capital of France?"
 ```
 
 ### **Disable RAG**
 
 ```bash
-agent ask "hello" --no-rag
+agent ask "What is the capital of France?" --no-rag
 ```
 
 ### **JSON mode**
@@ -103,55 +137,83 @@ agent chat
 
 ---
 
-### RAG (Built-in)
+### History / Memory
 
 Your memory DB lives at:
 
 ```bash
 ~/.multimodal_agent/memory.db
 ```
-**To clear memory:**
+
+Show memory:
+
 ```bash
-agent clear
+agent history show
 ```
 
-RAG includes:
+Clear memory:
 
-* chunking
-* embeddings
-* cosine similarity
-* session grouping
-* project-learning style profiles (v0.6.0)
+```bash
+agent history clear
+```
+
+Summarize memory:
+
+```bash
+agent history summary
+```
 
 ---
 
-### Project Learning (v0.6.0)
+## Learning a Project
 
-The agent can scan a project and learn its structure.
-
-Example:
+Let the agent scan and store a project summary:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/learn/project \
-  -H "Content-Type: application/json" \
-  -d '{"path": "/path/to/flutter/project"}'
+agent learn-project my_app/
 ```
 
-This extracts:
-
-* package name
-* architecture patterns
-* linting rules
-* state management
-* file counts
-* widget usage patterns
-* build_runner / freezed usage
-* and stores a **profile** in SQLite
-
-List learned profiles:
+List learned projects:
 
 ```bash
-curl http://127.0.0.1:8000/project_profiles/list
+agent list-projects
+```
+
+Show a specific project:
+
+```bash
+agent show-project project:my_app
+```
+
+Inspect project without saving:
+
+```bash
+agent inspect-project my_app/
+```
+
+---
+
+### Python API Example
+
+```python
+from multimodal_agent.core.agent_core import MultiModalAgent
+
+agent = MultiModalAgent()
+
+resp = agent.ask("Explain quantum computing")
+print(resp.text)
+print(resp.usage)
+
+```
+
+Image example:
+
+```python
+from multimodal_agent.utils import load_image_as_part
+
+img = load_image_as_part("cat.jpg")
+resp = agent.ask_with_image("describe this", img)
+print(resp.text)
 ```
 
 ---
@@ -169,7 +231,9 @@ Runs at:
 ```
 http://127.0.0.1:8000
 ```
+
 ## API Reference (v0.6.0)
+
 ## **POST /ask**
 
 ```bash
@@ -187,12 +251,15 @@ Response:
   "usage": { "prompt_tokens": 44, "response_tokens": 3, "total_tokens": 553 }
 }
 ```
+
 ## **POST /ask_with_image**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/ask_with_image \
   -F "file=@test.jpg" \
   -F "prompt=describe this"
 ```
+
 ### v0.6.0 Better Error Handling
 
 Failures now return:
@@ -263,6 +330,7 @@ Returns a structured project profile:
 ---
 
 ## Architecture Overview
+
 ```bash
 multimodal_agent/
     core/          # Main agent logic
@@ -299,30 +367,24 @@ make test
 make coverage
 ```
 
-160+ tests cover:
+This includes:
 
-* server
-* embeddings
-* chat memory
-* RAG
-* CLI commands
-* project learning
-* JSON mode
-* offline fake mode
+* RAG tests
+* CLI tests
+* JSON mode tests
+* Fake mode (offline)
+* Config isolation
+* SQLite operations
 
 ---
 
 ## Roadmap
 
-### **v0.6.x**
-
-* VS Code & JetBrains extension
-* Flutter extension (code generator + project insights)
-
-### **v0.7.x**
+### **v0.8.0**
 
 * Streaming responses
-* Pluggable embedding backends (Gemini / local / offline)
+* Conversations with images
+* Project-diff memory updates
 
 ### **v1.0**
 

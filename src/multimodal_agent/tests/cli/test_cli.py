@@ -15,7 +15,7 @@ def mock_google_client(mocker):
     fake_client = MagicMock()
     fake_client.models.generate_content.return_value = MagicMock(text="mocked")
     mocker.patch(
-        "multimodal_agent.agent_core.genai.Client",
+        "multimodal_agent.agent_core.Client",
         return_value=fake_client,
     )
     return fake_client

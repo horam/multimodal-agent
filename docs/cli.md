@@ -1,8 +1,20 @@
+# **Setting Models**
+
+You can change the default models used by the agent without editing code:
+```bash
+agent config set-chat-model gemini-1.5-flash
+agent config set-image-model gemini-1.5-flash
+agent config set-embed-model text-embedding-004
+```
+
+Check current configuration:
+```
+agent config show
+```
+
 # CLI Usage
 
-
 Run the agent directly in terminal:
-
 
 ```bash
 
@@ -17,13 +29,11 @@ agent ask "hello"
 
 Disable RAG:
 
-
 ```bash
 agent ask "hello"--no-rag
 ```
 
 JSON mode:
-
 
 ```bash
 agent ask "give json"--json
@@ -45,7 +55,6 @@ When image is missing or corrupted:
 
 CLI continues normally.
 
-
 ## **Chat Mode (Persistent)**
 
 ```bash
@@ -64,9 +73,11 @@ Exit:
 ```bash
 exit
 ```
+
 ## **Server**
 
 Run FastAPI server:
+
 ```bash
 agent server
 ```
@@ -79,15 +90,14 @@ Includes:
 - `/generate`
 - `/learn/project (v0.6.0)`
 
-
 ## **Project Learning (v0.6.0)**
 
 Server exposes project-learning endpoints for future Flutter code generation:
+
 - `/learn/project`
 - `/project_profiles/list`
 
 CLI itself does not learn projects yet, but the server backend supports it fully.
-
 
 ## **Offline Debug Mode**
 
