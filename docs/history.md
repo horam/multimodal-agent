@@ -1,51 +1,123 @@
-# History & Memory Management
+# History Management
 
-The CLI includes ergonomic tools for inspecting and managing memory.
+The Multimodal-Agent includes a built-in **RAG memory system** backed by SQLite.
+All queries can optionally write messages to memory, and you can inspect, filter, or
+clear history directly from the CLI.
 
-Introduced in **v0.2.6**.
+History is grouped by **session IDs**.  
+If you do not provide a session ID, the agent uses a default session.
 
 
+## Viewing History
 
-# Commands
+Show recent memory entries:
 
-## Show history
+```bash
+agent history show
+```
 
+Limit the number of entries:
+```bash
 agent history show --limit 20
+```
+Filter by session:
+```bash
+agent history show --session my-app
+```
+
+Hide noisy internal messages (FAKE_RESPONSE, project profiles, tests):
+
+```bash
+agent history show --clean
+```
+
+## Clearing History
+
+Clear all entries:
+```bash
+agent history clear
+```
+Clear entries for a specific session:
+```bash
+agent history clear --session my-app
+```
 
 
-## Show history for a session
+## Deleting a Specific Chunk
 
-agent history show --session chatA
-
-
-
-# Delete a specific chunk
+Each memory item has a numeric ID.
+To delete one:
 ```bash
 agent history delete 42
 ```
 
 
-# Clear history
-```bash
-agent history clear
-```
+## Summarizing Memory
 
-or per session:
-```bash
-agent history clear --session abc
-```
-
-# Summaries
-
+The agent can summarize memory using the current chat model:
 ```bash
 agent history summary --limit 50
 ```
 
-The agent summarizes recent history using Gemini (RAG disabled for the summary call).
+Or for a specific session:
+```bash
+agent history summary --session my-app
+```
+The summary is generated using AI but is never stored automatically—you’re in control.
 
 
+## How History Works Internally
+-	History is stored inside a SQLite database:
+```bash
+~/.multimodal_agent/memory.db
+```
 
-# Under the Hood
-- Uses the `SQLiteRAGStore`
-- Performs fast range queries via indexed tables
-- Deletes cascade into embeddings  
+- Each message is stored with:
+
+    -   content
+	-	role (“user”, “assistant”, “note”, etc.)
+    -	session_id
+	-	source (CLI, project-learning, test, etc.)
+	-	timestamp
+	-	Text queries (agent ask) and chat sessions store content unless --no-rag is used.
+	-	Image queries also store text fragments derived from the description.
+
+
+## Disabling RAG / History
+
+You can disable memory for a single query:
+```bash
+agent ask "What is DI?" --no-rag
+```
+
+Or start a chat without memory:
+```bash
+agent chat --no-rag
+```
+
+## Writing Notes Manually
+
+You can manually insert notes into memory using Python:
+```python
+from multimodal_agent import MultiModalAgent
+
+agent = MultiModalAgent()
+agent.rag_store.add_logical_message(
+    content="This project uses Riverpod.",
+    role="note",
+    session_id="flutter-app",
+    source="manual"
+)
+```
+## Project Learning (v0.6.0+)
+
+The learn-project command scans source code and saves a structured project profile into memory.
+```bash
+agent learn-project my_flutter_app/
+```
+Then retrieve:
+```bash
+agent show-project project:my_flutter_app
+```
+
+Project learning integrates seamlessly with history and improves the model’s responses.

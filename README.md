@@ -8,6 +8,7 @@
 
 ### Core LLM Capabilities
 
+* Flutter code generation (widgets, screens, models)
 * Unified agent for **text, image, and chat** interactions
 * Clean  **CLI** : `agent ask`, `agent image`, `agent chat`, `agent history`, `agent learn-project`
 * Supports  **Gemini 2.5-flash** ,  **1.5-flash** , and any future model (configurable)
@@ -47,6 +48,7 @@
 
 ## Installation
 
+### Install with pip
 ```bash
 pip install multimodal-agent
 ```
@@ -54,6 +56,8 @@ pip install multimodal-agent
 Or local:
 
 ```bash
+git clone https://github.com/horam/multimodal-agent.git
+cd multimodal-agent
 pip install -e .
 ```
 
@@ -62,7 +66,6 @@ pip install -e .
 # Configuration
 
 ### Show current configuration:
-
 ```bash
 agent config show
 ```
@@ -102,9 +105,7 @@ api_key: YOUR_KEY
 ```
 
 ---
-
 ## Quick Start
-
 ### **Text Question**
 
 ```bash
@@ -134,7 +135,6 @@ agent image test.jpg "describe this"
 ```bash
 agent chat
 ```
-
 ---
 
 ### History / Memory
@@ -351,6 +351,149 @@ projects      # project profiles (v0.6.0)
 
 ---
 
+### Flutter Code Generation (v0.8.0)
+The agent can generate fully functional Flutter files directly inside your project.
+
+You must run commands from within a Flutter project (containing `pubspec.yaml`).
+
+Generated files are written to:
+
+```bash
+lib/widgets/
+lib/screens/
+lib/models/
+```
+
+### Generate a Flutter Widget
+**Stateless widget**
+```bash
+agent gen widget HomeCard
+```
+**Stateful widget**
+```bash
+agent gen widget CoolCounter --stateful
+```
+**Example output**
+```dart
+import 'package:flutter/material.dart';
+
+class CoolCounter extends StatefulWidget {
+  const CoolCounter({super.key});
+
+  @override
+  State<CoolCounter> createState() => _CoolCounterState();
+}
+
+class _CoolCounterState extends State<CoolCounter> {
+  int _counter = 0;
+
+  void _incrementCounter() {
+    setState(() => _counter++);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('$_counter');
+  }
+}
+```
+## Generate a Screen
+```bash
+agent gen screen SettingsScreen
+```
+Every screen is a `StatelessWidget` with:
+
+- Scaffold
+- AppBar
+- Centered placeholder body
+
+## Generate a Dart Model
+```bash
+agent gen model UserProfile
+```
+Generated model includes:
+
+- final fields
+- const constructor
+- copyWith
+- fromJson / toJson
+- toString
+
+**Example**
+```dart
+class UserProfile {
+  final String name;
+  final int age;
+
+  const UserProfile({required this.name, required this.age});
+
+  UserProfile copyWith({String? name, int? age}) =>
+      UserProfile(name: name ?? this.name, age: age ?? this.age);
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) =>
+      UserProfile(name: json['name'], age: json['age']);
+
+  Map<String, dynamic> toJson() => {'name': name, 'age': age};
+}
+```
+## Naming Rules (Class + File Names)
+**sanitize_class_name()**
+
+Input → Class Name
+
+| Input |	Output |
+------------------
+| my widget |	MyWidget |
+| my-widget	| MyWidget |
+| my_widget	| MyWidget |
+| 123widget	| W123widget |
+| my@bad#name	| MyBadName |
+
+**to_snake_case()**
+Input → snake_case
+
+|Input  |	Output  |
+--------------------
+|MyWidget |	my_widget |
+-----------------------
+|MyWidgetScreen |	my_widget_screen  |
+-------------------------------------
+|my widget  |	my_widget |
+--------------------------------------
+|my@invalid-name  |	myinvalid_name  |
+
+🔥 Offline Mode (No API Key)
+If no API key is configured:
+
+Text mode
+javascript
+Copy code
+FAKE_RESPONSE: <your prompt>
+JSON mode
+text contains JSON string
+
+data is None (tests enforce this)
+
+Example:
+
+json
+Copy code
+{"message": "hello"}
+This is intended for CI and local testing.
+
+## Config
+Show config:
+
+```bash
+agent config show
+```
+Set models:
+
+```bash
+agent config set-model gemini-2.5-flash
+agent config set-image-model gemini-vision
+agent config set-embed-model gemini-embed
+```
 ## **Formatting Engine (v0.4.0+)**
 
 * Detects JSON, XML, HTML, code, python, kotlin, dart, js, swift …
@@ -375,25 +518,24 @@ This includes:
 * Fake mode (offline)
 * Config isolation
 * SQLite operations
+* Code generation
 
----
 
 ## Roadmap
+- Generate repository classes
 
-### **v0.8.0**
+- Generate abstract classes + interfaces
 
-* Streaming responses
-* Conversations with images
-* Project-diff memory updates
+- Generate enums
 
-### **v1.0**
+- CLI command to scaffold a full Flutter app
 
-* Stable API
-* Plugin ecosystem
-* Multi-language project analyzers
+- Local LLM mode
 
----
+- Plugin architecture for custom code generators
 
 # License
 
 MIT License.
+
+If you enjoy this project, ⭐ star the repo!

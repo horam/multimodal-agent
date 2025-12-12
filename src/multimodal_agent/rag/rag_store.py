@@ -395,10 +395,12 @@ class SQLiteRAGStore(RAGStore):
         """,
             (project_id,),
         )
-        row = cursor.fetchone()
-        if not row:
-            return None
-        return json.loads(row["content"])
+        rows = cursor.fetchall()
+        for row in rows:
+            try:
+                return json.loads(row["content"])
+            except Exception:
+                continue
 
     def close(self) -> None:
         self.conn.close()

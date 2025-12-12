@@ -1,86 +1,206 @@
-# JSON Response Mode
+# JSON Mode (response_format="json")
 
-Since **v0.3.0**, Multimodal-Agent supports structured JSON output via:
+The Multimodal Agent supports strict JSON responses using either:
+-	the Python API, or
+-	the CLI flag --json
 
+JSON mode ensures that structured outputs are:
+-	Valid JSON (strictly parseable)
+-	Returned through AgentResponse.data
+-	Mirrored as a JSON string in AgentResponse.text
+
+This is strongly recommended for tool output, structured reasoning, and integration workflows.
+
+
+## Enabling JSON Mode
+
+### Python API
 ```python
-agent.ask(question, response_format="json")
-```
-## How it works
-The agent instructs the model to return raw JSON without backticks.
+from multimodal_agent.core.agent_core import MultiModalAgent
+agent = MultiModalAgent()
 
-- The final result is always an AgentResponse object.
-
-- Parsed JSON is stored in response.data (a Python dict or None).
-
-- The raw text returned by the model is always accessible via response.text.
-
-- Markdown fences such as:
-
-```json
-{ ... }
-```
-are automatically stripped during parsing.
-
-- Invalid or malformed JSON cleanly falls back to:
-
-```python
-{"raw": "<original text>"}
-```
-This ensures JSON mode never crashes.
-
-## Example
-```python
-from multimodal_agent import MultiModalAgent
-
-agent = MultiModalAgent(enable_rag=False)
-
-result = agent.ask(
-    "Return a movie object with title and year.",
-    response_format="json",
-)
-
-print(result.data)   # parsed dict
-print(result.text)   # raw text from the model
-```
-Output:
-
-```python
-{"title": "The Matrix", "year": 1999}
-```
-## JSON from Images
-```python
-from multimodal_agent import MultiModalAgent
-from multimodal_agent.utils import load_image_as_part
-
-agent = MultiModalAgent(enable_rag=False)
-img = load_image_as_part("cat.jpg")
-
-result = agent.ask_with_image(
-    "Describe this image as JSON.",
-    img,
-    response_format="json",
-)
-
+result = agent.ask("Give me a JSON object", response_format="json")
 print(result.data)
 ```
-## Offline Mode
-If no GOOGLE_API_KEY is set:
+Result Structure
+```python
+AgentResponse(
+    text='{"weather":"sunny"}',
+    data={"weather": "sunny"},
+    usage={...}
+)
+```
 
+-	**text:** raw JSON string returned by the model
+-	**data:** parsed Python dictionary
+-	**usage:** token usage metadata
+
+
+### CLI Mode
+```bash
+agent ask "Describe your system as JSON" --json
+```
+
+Output Example
+```json
+{
+  "weather": "sunny",
+  "temperature": 28
+}
+```
+
+
+
+## JSON Mode in Offline Fake Mode
+
+If no API key is set, the agent enters fake mode:
 ```bash
 export GOOGLE_API_KEY=""
 ```
-The agent switches to FakeResponse simulation mode.
 
-JSON mode still returns an AgentResponse, and .data becomes:
+In fake mode:
 
+**Request**
 ```python
-
-result = agent.ask("hello", response_format="json")
-print(result.data)
+agent.ask("hello", response_format="json")
 ```
-Output:
 
+**Output**
 ```python
-{"raw": "FAKE_RESPONSE: hello"}
+AgentResponse(
+    text='{"message": "hello"}',
+    data={"message": "hello"},
+)
 ```
-JSON mode behaves consistently across online and offline scenarios.
+
+Important change in v0.8.x:
+
+✔ **data is now a dict**, not None
+
+✔ JSON behavior is consistent in online/offline mode
+
+✔ Tests expect .data to contain the parsed JSON
+
+This simplifies testing and keeps the model behavior stable.
+
+
+## Behavior Guarantees
+
+**✔ Always returns valid JSON**
+
+The agent will retry, repair, and normalize the model output.
+
+**✔ No markdown or prose allowed**
+
+Prompts automatically enforce:
+```bash
+Output ONLY valid JSON. No commentary.
+```
+
+**✔ If JSON cannot be parsed → raises AgentError**
+
+Example:
+```bash
+AgentError: Failed to parse JSON output:
+<raw model output>
+```
+
+
+
+## Common Use Cases
+
+### Structured Information Extraction
+```python
+agent.ask(
+    "Extract name and age.",
+    response_format="json"
+)
+```
+```bash
+{"name": "Alice", "age": 32}
+```
+---
+
+### Tool Invocation & Function Arguments
+
+JSON mode allows the agent to be used as a semantic parser.
+
+---
+
+### Integration With Frontend / Mobile Apps
+
+Dart, React, and Flutter consumers benefit from predictable structured output:
+```bash
+{"title": "Hello", "count": 3}
+```
+
+
+## Error Handling
+
+**Invalid JSON**
+
+If the model returns malformed JSON:
+```bash
+AgentError: Failed to parse JSON output
+```
+
+**Offline Fake Mode Always Succeeds**
+
+Guaranteed output:
+```json
+{"message": "your_prompt_here"}
+```
+
+Useful for:
+-	CI pipelines
+-	Local unit tests
+-	Environments without internet
+
+⸻
+
+## Accessing JSON Results
+
+**Python API**
+```python
+data = result.data     # dict
+raw = result.text      # JSON string
+```
+**CLI**
+
+Output is printed as clean JSON:
+```bash
+agent ask "hi" --json
+```
+
+
+## Best Practices
+
+**✔ Always validate required fields:**
+```python
+if "name" not in result.data:
+    raise ValueError("Missing required field: name")
+```
+**✔ Design prompts like this:**
+```bash
+Return ONLY valid JSON with fields: name, age, city.
+```
+
+**✔ Avoid natural language in JSON mode prompts.**
+
+**✔ For complex schemas, include a template:**
+```bash
+Provide JSON with this structure:
+{
+  "title": "",
+  "items": []
+}
+```
+
+
+## Summary Table
+
+| Mode	|   text    |	data    |
+|-------|-----------|-----------|
+| JSON mode (online)	|   Raw JSON    |	Parsed dict |
+| JSON mode (offline/fake)  |	JSON string	|   Parsed dict |
+| Text mode	|   Text/string |   	None    |

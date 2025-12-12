@@ -1,59 +1,64 @@
 # Multimodal-Agent
 
-A lightweight, production-ready wrapper around **Google Gemini** with:
-- Robust CLI(`agent`)
-- RAG memory
-- FastAPI server
-- Image + text mode
-- JSON mode
-- Project learning (v0.6.0)
-- Offline testing mode
+A lightweight, production-ready wrapper around **Google Gemini** offering:
 
-Latest version: **v0.6.0**
+- A powerful CLI (`agent`)
+- Code generation for Flutter (widgets, screens, models)
+- RAG memory with SQLite
+- FastAPI server mode
+- Image + text multimodal queries
+- JSON output mode
+- Project learning & analysis
+- Offline / fake-response mode for testing
+- Clean usage logging & retry/backoff
+- Syntax-aware output formatting
+
+Latest version: **v0.8.0**
+
+---
 
 ## Contents
 
 ### Getting Started
-
 - [Installation](installation.md)
+- [Quickstart](quickstart.md)
 - [CLI Usage](cli.md)
 - [Python API](python_api.md)
 
 ### Core System
-
 - [Architecture Overview](architecture.md)
 - [Sessions](sessions.md)
 - [RAG System](rag.md)
 - [History Management](history.md)
+- [Configuration](config.md)
+
+### Code Generation (v0.8.0)
+- [Flutter Codegen Overview](codegen_overview.md)
+- [Widget / Screen / Model Generation](codegen_flutter.md)
+
 ### Advanced Features
-
 - [Response Metadata Schema](metadata_schema.md)
-
-- [JSON response mode](json_mode.md)
+- [JSON Response Mode](json_mode.md)
 - [Token Usage Logging](token_usage.md)
-- [Chunk Normalization (Planned)](chunk_normalization.md)
+- [Usage Logging Behavior](usage_logging.md)
 - [Server API](server.md)
 
-
-### Development
-
-- Project structure
-- Running tests
-- Coverage reports
-- Contributing
+---
 
 ## Key Features
 
 - Text generation
 - Image + text multimodal input
-- RAG with SQLite
-- Retry + backoff
-- Token logging
-- JSON output
-- Persistent session chat
-- Project-aware RAG (v0.6.0)
-- Server mode (FastAPI)
-- Syntax-aware code formatter
+- Local RAG using SQLite
+- Project-aware learning & analysis
+- Interactive chat sessions
+- Token accounting & logging
+- Offline fake-mode for deterministic tests
+- Syntax-aware code formatting
+- Flutter code generation:
+  - `agent gen widget`
+  - `agent gen screen`
+  - `agent gen model`
 
 ---
 
@@ -62,19 +67,13 @@ Latest version: **v0.6.0**
 ```bash
 pip install multimodal-agent
 ```
-With env key:
-
+Set your API key:
 ```bash
-export GOOGLE_API_KEY="your-key-here"
+export GOOGLE_API_KEY="your-api-key"
 ```
+No key?
+The CLI and Python API still work in **offline fake mode**, returning predictable response for testing.
 
-### **Roadmap**
-- v0.5.x — server features, RAG stability
-- v0.6.0 — project learning, project profiles, improved image handling
-- v0.7.0 — Flutter extension (code generation + analysis)
-
-
-## Need help?
-
-Open an issue on GitHub or submit a pull request.
-PRs improving docs, tests, or performance are always welcome.
+# need help?
+Open an issue on Github or submit a pull request.
+Contribution to docs, tests, and performance improvements are always welcome.

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from multimodal_agent.cli.history import handle_history
 from multimodal_agent.cli.printing import print_markdown_with_meta
+from multimodal_agent.codegen.engine import CodegenEngine
 from multimodal_agent.config import get_config, set_config_field
 from multimodal_agent.errors import AgentError
 from multimodal_agent.logger import get_logger
@@ -17,9 +18,6 @@ from multimodal_agent.project_scanner import (
 from multimodal_agent.rag.rag_store import SQLiteRAGStore, default_db_path
 from multimodal_agent.utils import load_image_as_part
 from multimodal_agent.version import __version__
-
-# REMOVE ALL history imports from top-level!
-
 
 # Load .env from the project root
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -96,6 +94,70 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Session ID for this query",
+    )
+
+    # agent gen <type> <name>
+    gen_parser = subparsers.add_parser(
+        "gen",
+        help="Generate Flutter code (widget/screen/model)",
+    )
+
+    gen_sub = gen_parser.add_subparsers(
+        dest="gen_cmd",
+        required=True,
+        help="Generation command",
+    )
+
+    # gen widget <name>
+    gen_widget = gen_sub.add_parser("widget", help="Generate a Flutter widget")
+    gen_widget.add_argument("name")
+    gen_widget.add_argument(
+        "--override",
+        action="store_true",
+        help="Overwrite file if it exists",
+    )
+    gen_widget.add_argument(
+        "--stateful",
+        action="store_true",
+        help="Generate a stateful widget",
+    )
+
+    gen_widget.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the desired widget UI.",
+    )
+
+    # gen screen <name>
+    gen_screen = gen_sub.add_parser("screen", help="Generate a Flutter screen")
+    gen_screen.add_argument("name")
+    gen_screen.add_argument(
+        "--override",
+        action="store_true",
+        help="Overwrite file if exists",
+    )
+    gen_screen.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the desired screen UI.",
+    )
+
+    # gen model <name>
+    gen_model = gen_sub.add_parser("model", help="Generate a Dart model class")
+    gen_model.add_argument("name")
+    gen_model.add_argument(
+        "--override",
+        action="store_true",
+        help="Overwrite if exists",
+    )
+
+    gen_model.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the model (fields / purpose).",
     )
 
     # format
@@ -246,7 +308,6 @@ def build_parser() -> argparse.ArgumentParser:
         "model",
         help="Model name to save as image model",
     )
-
 
     # agent config set-embed-model
     set_embed_model = config_sub.add_parser(
@@ -494,8 +555,10 @@ def _main(args, parser):
         elif args.command == "show-project":
             db_path = os.environ.get("MULTIMODAL_AGENT_DB", default_db_path())
             store = SQLiteRAGStore(db_path=db_path)
-
-            profile = store.load_project_profile(args.project_id)
+            project_id = args.project_id
+            if not project_id.startswith("project:"):
+                project_id = f"project:{project_id}"
+            profile = store.load_project_profile(project_id)
             if profile is None:
                 print("Profile not found")
                 return 0
@@ -509,6 +572,47 @@ def _main(args, parser):
             print(json.dumps(profile.to_dict(), indent=2))
             return 0
 
+        # agent gen ...
+        if args.command == "gen":
+            engine = CodegenEngine(model=getattr(args, "model", None))
+
+            # Widget
+            if args.gen_cmd == "widget":
+                out = engine.generate_and_write(
+                    kind="widget",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    stateful=getattr(args, "stateful", False),
+                    description=getattr(args, "desc", ""),
+                )
+                print(f"Widget generated at {out}")
+                return 0
+
+            # Screen
+            if args.gen_cmd == "screen":
+                out = engine.generate_and_write(
+                    kind="screen",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    description=getattr(args, "desc", ""),
+                )
+                print(f"Screen generated at {out}")
+                return 0
+
+            # Model
+            if args.gen_cmd == "model":
+                out = engine.generate_and_write(
+                    kind="model",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    description=getattr(args, "desc", ""),
+                )
+                print(f"Model generated at {out}")
+                return 0
+
         elif args.command == "config":
 
             if args.config_cmd == "set-key":
@@ -520,16 +624,15 @@ def _main(args, parser):
                 set_config_field("chat_model", args.model)
                 print(f"Model updated to {args.model}")
                 return 0
-            
+
             if args.config_cmd == "set-image-model":
                 set_config_field("image_model", args.model)
                 print(f"Image model updated to {args.model}")
                 return 0
-            if args.config_cmd == "set-embed-model":  
+            if args.config_cmd == "set-embed-model":
                 set_config_field("embedding_model", args.model)
                 print(f"Embedding model updated to {args.model}")
-                return 0  
-                
+                return 0
 
             if args.config_cmd == "show":
                 print(yaml.dump(get_config(), sort_keys=False))

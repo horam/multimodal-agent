@@ -1,196 +1,210 @@
-### *How sessions work in Multimodal Agent (0.2.6+)*
+# **Sessions**
 
-Sessions allow you to run multiple isolated or parallel conversations using:
+Sessions allow the Multimodal-Agent to maintain **context across multiple interactions**.
 
-* Session-scoped memory
-* RAG-based retrieval
-* History separation
-* Multi-tab CLI workflows (e.g., research1, bugfix2, article-draft)
+Each session has its own memory stream, enabling:
 
-This document explains how sessions work internally and how to use them in the CLI & Python API.
+* Multi-turn conversations
+* Independent threads of reasoning
+* Separate RAG histories
+* Clean isolation between tasks or projects
 
 
-# What is a Session?
+## **How Sessions Work**
 
-A **session** is simply an ID (string) associated with:
+Every interaction with the agent can be associated with a **session ID**:
 
-* All messages you send in that session
-* All agent responses
-* All embeddings generated for those messages
+```
+agent ask "Explain caching layers" --session study
+```
 
-This lets you have:
+The same session ID can be used repeatedly:
 
-* Long conversations without mixing contexts
-* Multiple independent threads (e.g.,  *project_a* ,  *r1_research* ,  *draft3* )
-* Fine-grained RAG memory filtering
+```
+agent ask "Continue" --session study
+```
 
+This lets the agent retrieve context from the RAG memory associated with that session.
 
 
-# How Sessions Work Internally
 
-### 1. When you pass:
+## **Why Sessions Matter**
 
-<pre class="overflow-visible!" data-start="987" data-end="1007"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>--session</span><span> s1
-</span></span></code></div></div></pre>
+| **Feature**       | **Description**                                                  |
+| ----------------------- | ---------------------------------------------------------------------- |
+| Persistent conversation | The agent remembers user messages and responses.                       |
+| Contextual RAG          | Retrieval is limited to entries from the same session (unless forced). |
+| Multi-session workflows | You can maintain several “workspaces” of knowledge.                  |
+| Better isolation        | Different projects or topics never interfere with each other.          |
 
-The agent automatically:
 
-1. Creates the session if it doesn't exist
-2. Stores all chunks in the DB with `session_id = "s1"`
-3. Embeds each message (both user + agent)
-4. Performs RAG retrieval using:
 
-<pre class="overflow-visible!" data-start="1217" data-end="1330"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>SELECT</span><span> * </span><span>FROM</span><span> embeddings 
-</span><span>WHERE</span><span> model = <emb-model> </span><span>AND</span><span> session_id = "s1"
-</span><span>ORDER</span><span></span><span>BY</span><span> cosine_similarity </span><span>DESC</span><span>
-</span></span></code></div></div></pre>
+## **Session IDs in CLI Commands**
 
-If `--session` is  **not used** , the messages belong to:
+### **Ask command**
 
-<pre class="overflow-visible!" data-start="1389" data-end="1419"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>session_id</span><span> = </span><span>"default"</span><span>
-</span></span></code></div></div></pre>
+```
+agent ask "Hello" --session chat1
+```
 
+### **Image command**
 
-# RAG + Sessions
+```
+agent image pic.png "Describe this" --session design_experiment
+```
 
-With RAG enabled (default):
+### **Chat mode (interactive)**
 
-* RAG searches  **within the same session** , if session is set
-* Or **across all sessions** if no session is provided
-* Retrieval is filtered by model and chunk role
-* The agent constructs a recap-context from top-K chunks
-* This recap is inserted *before your prompt*
+```
+agent chat --session daily
+```
 
-This improves answer quality in ongoing conversations without polluting unrelated ones.
+The session continues until you exit chat mode.
 
 
-# Using Sessions in the CLI
+## **How Sessions Interact with RAG Memory**
 
-### Start a new session:
+Each message added to the RAG store is tagged with:
 
-<pre class="overflow-visible!" data-start="1907" data-end="1953"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent ask </span><span>"hello"</span><span></span><span>--session my_session</span><span>
-</span></span></code></div></div></pre>
+* session_id
+* **role (**user**, **assistant**, or **project_profile**)**
+* timestamp
+* **source (**ask**, **chat**, **project-learning**, etc.)**
 
-### Start an isolated chat:
+Example RAG record:
 
-<pre class="overflow-visible!" data-start="1984" data-end="2024"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent chat </span><span>--session</span><span> story_draft
-</span></span></code></div></div></pre>
+```
+{
+  "session_id": "study",
+  "content": "Explain transformers...",
+  "role": "user",
+  "source": "ask"
+}
+```
 
-### List session history:
+When the agent receives a query:
 
-<pre class="overflow-visible!" data-start="2053" data-end="2101"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent history </span><span>show</span><span></span><span>--session story_draft</span><span>
-</span></span></code></div></div></pre>
+1. It looks for relevant RAG entries **only within the same session**
+2. Applies vector similarity
+3. Constructs a retrieval-augmented prompt
+4. Produces a contextual answer
 
-### Summarize session memory:
+Disable RAG for stateless interactions:
 
-<pre class="overflow-visible!" data-start="2134" data-end="2185"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent history </span><span>summary</span><span></span><span>--session</span><span> story_draft
-</span></span></code></div></div></pre>
+```
+agent ask "hello" --no-rag
+```
 
-### Delete a session (indirectly, via chunks):
 
-<pre class="overflow-visible!" data-start="2235" data-end="2262"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre!"><span><span>agent </span><span>history</span><span></span><span>clear</span><span>
-</span></span></code></div></div></pre>
+## **Offline Mode (No API Key)**
 
+If no **GOOGLE_API_KEY** is found:
 
+* Sessions still work
+* RAG still stores and retrieves memory
+* The model returns deterministic **FAKE_RESPONSE:** answers
+* No external API calls are made
 
-# Using Sessions in Python
+This is ideal for:
 
-### Basic example:
+* testing
+* CI pipelines
+* working offline
 
-<pre class="overflow-visible!" data-start="2320" data-end="2494"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>from</span><span> multimodal_agent </span><span>import</span><span> MultiModalAgent
+Example:
 
-agent = MultiModalAgent()
+```
+agent ask "hello" --session test
+```
 
-resp = agent.ask(
-    </span><span>"Summarize this topic"</span><span>,
-    session_id=</span><span>"research2"</span><span>,
-)
-</span><span>print</span><span>(resp)
-</span></span></code></div></div></pre>
+Produces:
 
-### With image:
+```
+FAKE_RESPONSE: hello
+```
 
-<pre class="overflow-visible!" data-start="2513" data-end="2717"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>from</span><span> multimodal_agent.utils </span><span>import</span><span> load_image_as_part
 
-img = load_image_as_part(</span><span>"chart.png"</span><span>)
+## **Managing Session Memory**
 
-resp = agent.ask_with_image(
-    </span><span>"Explain this chart"</span><span>,
-    img,
-    session_id=</span><span>"analysis_2025"</span><span>
-)
-</span></span></code></div></div></pre>
+### **View recent history**
 
-### Chat loop with persisted session:
+```
+agent history show --session study
+```
 
-<pre class="overflow-visible!" data-start="2758" data-end="2806"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>agent.chat(session_id=</span><span>"long_chat"</span><span>)
-</span></span></code></div></div></pre>
+### **View only last N items**
 
+```
+agent history show --limit 20 --session study
+```
 
+### **Show cleaned history (no FAKE_RESPONSE, no system noise)**
 
-# Database Structure
+```
+agent history show --clean --session study
+```
 
-Sessions live in the SQLite store:
+### **Clear all memory**
 
-### `sessions` table
+```
+agent history clear
+```
 
-| Column     | Type      | Description                 |
-| ---------- | --------- | --------------------------- |
-| id         | TEXT PK   | Session ID                  |
-| label      | TEXT      | Optional label for UI tools |
-| created_at | TIMESTAMP | Auto timestamp              |
+### **Delete a specific entry**
 
-### `chunks` table
+```
+agent history delete 42
+```
 
-Each message (user OR agent):
 
-| Column     | Description        |
-| ---------- | ------------------ |
-| id         | Auto PK            |
-| session_id | FK → sessions     |
-| role       | user / agent       |
-| content    | Text content       |
-| source     | chat / ask / image |
-| created_at | Auto timestamp     |
+## **Recommended Session Naming Conventions**
 
-### `embeddings` table
+Use short, descriptive names:
 
-Each chunk is embedded once:
+* flutter_app
+* thesis
+* design_review
+* bugfix_123
+* morning_chat
 
-| Column    | Description          |
-| --------- | -------------------- |
-| chunk_id  | FK → chunks         |
-| model     | embedding model name |
-| dim       | vector dimension     |
-| embedding | JSON vector          |
+Avoid:
 
+* very long names
+* names with spaces
+* names used for unrelated topics
 
 
-# Testing Sessions
 
-Tests that expect real RAG behavior use:
+## **Quick Examples**
 
-<pre class="overflow-visible!" data-start="3637" data-end="3676"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-python"><span><span>@pytest.mark.use_real_rag</span><span>
-</span></span></code></div></div></pre>
+### **Math session**
 
-Fake store is used automatically for others.
+```
+agent ask "What is Fourier transform?" --session math
+agent ask "Give me an example" --session math
+```
 
+### **Flutter session**
 
+```
+agent ask "How do I use Navigator 2.0?" --session flutter
+```
 
-# Recommended Session Strategy
+### **Debug session**
 
-| Use Case                    | Suggested Session            |
-| --------------------------- | ---------------------------- |
-| Debugging                   | `--session debug`          |
-| Research notes              | `--session research_topic` |
-| Multi-doc summarization     | `--session docset_2025`    |
-| Teaching agent custom rules | `--session persona1`       |
-| Story writing               | `--session novel_draft1`   |
+```
+agent chat --session debug_issue
+```
 
 
 
-# Tips
+## **Summary**
 
-* Use sessions to  **separate unrelated conversations** .
-* RAG becomes significantly more accurate when sessions isolate context.
-* You can maintain long-running threads like `career`, `health`, `side_project`.
+| **Feature**                     | **Status**        |
+| ------------------------------------- | ----------------------- |
+| Persistent chat history               | ✔️                    |
+| Session-scoped RAG retrieval          | ✔️                    |
+| Isolated memory streams               | ✔️                    |
+| Works offline                         | ✔️ FAKE_RESPONSE mode |
+| Fully supported across ask/image/chat | ✔️                    |
+| CLI + API support                     | ✔️                    |

@@ -1,162 +1,262 @@
-# Multimodal-Agent Server API
+# **Agent Server (FastAPI REST API)**
 
-The Multimodal-Agent server exposes a clean HTTP interface to all core agent features:
+The Multimodal Agent provides a lightweight HTTP server built on **FastAPI**, allowing external applications (Flutter, web, backend systems) to call the agent over HTTP.
 
-- Text generation
-- Image + text multimodal queries
-- JSON mode
-- RAG memory search
-- Project learning (new in v0.6.0)
+Start the server using:
 
-Server runs via:
+```
+agent server --port 8000
+```
 
-```bash
+The API exposes endpoints for:
+
+* Text generation (**/generate**)
+* Image + text multimodal generation (**/generate-image**)
+* JSON mode output
+* Token usage reporting
+
+---
+
+## **Start the Server**
+
+```
 agent server
 ```
-Default URL:
 
-```bash
-http://127.0.0.1:8000
+Default port: **8000**
+
+Override:
+
+```
+agent server --port 9000
 ```
 
-### **POST /ask**
 ---
-Send a text prompt to the agent.
 
-```bash
-curl -X POST http://127.0.0.1:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{ "prompt": "hello" }'
-```
-Response:
+## **Endpoints Overview**
 
-```json
-{
-  "text": "hello",
-  "data": null,
-  "usage": { "prompt_tokens": 44, "response_tokens": 1, "total_tokens": 553 }
-}
-```
-Supports         |       Field Description |
-| -------------- | ----------------------- | 
-| response_format  |	"json" or "text"       |
-| session_id	 | Custom chat session
-| no_rag	   |  Disable RAG for this request
+| **Endpoint** | **Method** | **Description**      |
+| ------------------ | ---------------- | -------------------------- |
+| /generate          | POST             | Generate from text prompt  |
+| /generate-image    | POST             | Generate from text + image |
+| /health            | GET              | Health check               |
 
-### **POST /ask_with_image**
-----
-Multipart endpoint for sending an image + prompt.
-
-```bash
-curl -X POST http://127.0.0.1:8000/ask_with_image \
-  -F "file=@test.jpg" \
-  -F "prompt=describe this image"
-```
-## Error Handling (v0.6.0)
-This endpoint now safely handles:
-
-- missing files
-- unreadable or corrupted images
-- unsupported formats
-
-The server always returns:
 ---
-```json
-{ "error": "Invalid or unreadable image file." }
-```
-instead of crashing.
+
+## **Text Generation API**
 
 ### **POST /generate**
-----
-Generate structured JSON or plain text.
 
-```bash
-curl -X POST http://127.0.0.1:8000/generate \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "give json", "json": true}'
+Request:
+
 ```
+{
+  "prompt": "Write a short poem about stars",
+  "response_format": "text",
+  "session": "optional-session-id"
+}
+```
+
+### **Response:**
+
+```
+{
+  "text": "The stars drift softly...",
+  "data": null,
+  "usage": {
+    "prompt_tokens": 17,
+    "response_tokens": 22,
+    "total_tokens": 39
+  }
+}
+```
+
+---
+
+## **JSON Mode API**
+
+Request:
+
+```
+{
+  "prompt": "Return JSON with { name, age }",
+  "response_format": "json"
+}
+```
+
 Response:
 
-```json
+```
 {
-  "data": { "x": 42 },
-  "text": "{ \"x\": 42 }"
+  "text": "{\"name\": \"Alice\", \"age\": 25}",
+  "data": {
+    "name": "Alice",
+    "age": 25
+  },
+  "usage": {
+    "prompt_tokens": 13,
+    "response_tokens": 12,
+    "total_tokens": 25
+  }
 }
 ```
-### **POST /memory/search**
-----
-Search stored memory (RAG).
 
-```bash
-curl -X POST http://127.0.0.1:8000/memory/search \
-  -H "Content-Type: application/json" \
-  -d '{ "query": "hello", "limit": 5 }'
+---
+
+## **Image + Text Generation**
+
+### **POST /generate-image**
+
+Supports multimodal input using a base64-encoded image.
+
+Request:
+
 ```
-Returns:
-
-```json
 {
-  "results": [
-    [0.91, { "id": 41, "content": "hello", "role": "user" }]
-  ]
-} 
+  "prompt": "Describe this image",
+  "image_base64": "<base64 string>",
+  "mime_type": "image/jpeg"
+}
 ```
-### **POST /memory/summary**
----
 
-If summarization is available, returns a summary of stored memory.
-If not available:
-
-```json
-{ "summary": "Memory summarization not available." }
-```
-### **POST /learn/project (v0.6.0)**
----
-Learn a Flutter/Dart project structure and store its profile into RAG.
-
-```bash
-curl -X POST http://127.0.0.1:8000/learn/project \
-  -H "Content-Type: application/json" \
-  -d '{ "path": "/abs/path/to/project" }'
-```
 Response:
 
-```json
+```
 {
-  "status": "ok",
-  "message": "Project learned",
-  "project_id": "project:my_app",
-  "profile": { ... }
+  "text": "A cat is sitting on a windowsill...",
+  "data": null,
+  "usage": {
+    "prompt_tokens": 7,
+    "response_tokens": 18,
+    "total_tokens": 25
+  }
 }
 ```
-### **GET /project_profiles/list (v0.6.0)**
-List all stored project profiles.
 
-```bash
-curl http://127.0.0.1:8000/project_profiles/list
-```
-Example:
-
-```json
-{
-  "projects": [
-    {
-      "project_id": "project:my_app",
-      "profile": { "package_name": "my_app" },
-      "created_at": "2025-12-07 12:42:58"
-    }
-  ]
-}
-```
-### **GET /project/{id}**
 ---
-Retrieve a stored profile:
 
-```bash
-curl http://127.0.0.1:8000/project/project:my_app
+## **Offline Mode Behavior**
+
+If **GOOGLE_API_KEY** is missing:
+
+### **Response (text mode)**
+
 ```
-### **Server Architecture**
-----
-Endpoints map directly to internal agent methods (ask, ask_with_image, RAG calls, project scanning).
+{
+  "text": "FAKE_RESPONSE: <your prompt>",
+  "data": null,
+  "usage": {
+    "prompt_tokens": 10,
+    "response_tokens": 5,
+    "total_tokens": 15
+  }
+}
+```
 
-Fully compatible with future Flutter extension (code generation, project-introspection).
+Useful for:
+
+* CI testing
+* Local development
+* Deterministic behavior
+
+---
+
+## **Error Handling**
+
+All errors follow a consistent schema:
+
+```
+{
+  "error": "Invalid request",
+  "detail": "Field 'prompt' is required",
+  "status": 400
+}
+```
+
+Internal agent errors:
+
+```
+{
+  "error": "ModelError",
+  "detail": "Model failed to generate a response",
+  "status": 500
+}
+```
+
+---
+
+## **Example: cURL Commands**
+
+Text:
+
+```
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "hello"}'
+```
+
+Image:
+
+```
+curl -X POST http://localhost:8000/generate-image \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"What is in this image?", "image_base64":"<...>"}'
+```
+
+---
+
+## **Python Client Example**
+
+```
+import requests
+
+resp = requests.post(
+    "http://localhost:8000/generate",
+    json={"prompt": "Hello world"}
+)
+
+print(resp.json())
+```
+
+---
+
+## **Flutter Client Example**
+
+```
+final response = await http.post(
+  Uri.parse("http://localhost:8000/generate"),
+  headers: {"Content-Type": "application/json"},
+  body: jsonEncode({"prompt": "hello"}),
+);
+
+final data = jsonDecode(response.body);
+print(data["text"]);
+```
+
+---
+
+# **Future Server Extensions (v0.9.x)**
+
+The roadmap includes:
+
+* SSE streaming endpoint (**/stream**)
+* Code generation endpoint (**/codegen**)
+* Endpoint for executing a chain of model calls
+* Endpoint for RAG retrieval preview (**/rag/inspect**)
+* Built-in authentication tokens
+
+---
+
+## **Summary**
+
+The server:
+
+✔ Provides clean, predictable JSON responses
+
+✔ Supports text, images, and JSON mode
+
+✔ Mirrors the exact behavior of the Python API
+
+✔ Works offline for tests and CI
+
+✔ Integrates cleanly with Flutter, Node, and backend services

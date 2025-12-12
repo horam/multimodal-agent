@@ -1,88 +1,254 @@
-# RAG System (Retrieval-Augmented Generation)
+# **RAG System (Retrieval-Augmented Generation)**
 
-The RAG system provides persistent memory storage using SQLite.
+The **RAG layer** in **multimodal-agent** is designed to be:
 
-Features:
+* **Simple** (SQLite-based)
+* **Fast** (local only, no vector DB required)
+* **Deterministic** (in tests + offline mode)
+* **Compatible** with Chat, Ask, Image, and Project Learning flows
+* **Optional** (disable via **--no-rag**)
 
-- Message chunk storage
-- Embedding storage
-- Cosine similarity retrieval
-- Integration with `ask()` and `chat()`
-- Project profile storage (v0.6.0)
+RAG helps the agent remember previous interactions, retrieve useful context, and apply project awareness without re-sending long conversation histories to the model.
 
-Memory DB location:
-```bash
+
+## **Purpose of RAG**
+
+RAG is used for:
+
+### **✔ Injecting memory into prompts**
+
+The agent automatically retrieves recent memory entries and sends them along with your question.
+
+### **✔ Improving multi-step workflows**
+
+Long chats can build up relevant context over time.
+
+### **✔ Project-level learning**
+
+Using:
+
+```
+agent learn-project /path/to/project
+```
+
+the agent builds a project profile and stores it as a RAG memory block, enabling smarter code analysis and contextual follow-up questions.
+
+### **✔ Reducing prompt size**
+
+The model only receives the *recent and relevant* memory entries, not full histories.
+
+
+
+## **RAG Architecture Overview**
+
+RAG consists of three main components:
+
+
+
+### **SQLiteRAGStore**
+
+The persistence layer storing all memory:
+
+```
 ~/.multimodal_agent/memory.db
 ```
 
+It supports:
 
-## How RAG Works
+* add memory chunks
+* list memory chunks
+* retrieve by session
+* store project profiles
+* delete individual chunks
+* clear entire memory
 
-1. Text is split into normalized chunks.
-2. Each chunk is embedded using Gemini embeddings.
-3. Embeddings stored in `embeddings` table.
-4. Queries embed the input text.
-5. Cosine similarity finds most relevant chunks.
-6. Agent uses them to augment responses.
+There is currently **no vector search** — memory is chronological and relevance-based by session and context.
 
+---
 
-## Project Learning Integration (v0.6.0)
+### **Memory Chunk Normalization(lightweight)**
 
-`ingest_style_into_rag()` stores:
+Every memory entry is processed as:
 
-- package metadata
-- architecture style
-- lint profile
-- Dart structure summary
-
-This allows queries like:
-
-```bash
-POST /memory/search {"query": "bloc architecture"}
+```
+{
+  "type": "message",
+  "role": "user" | "assistant" | "project_profile",
+  "content": "...",
+  "session_id": "some-session",
+  "source": "chat" | "ask" | "project-learning" | "test"
+}
 ```
 
-to retrieve project structure insights.
+Normalization ensures the agent can use memory consistently regardless of input type.
 
+---
 
-## Storage Layout
+### **RAG Injection Layer**
 
-- chunks
-- embeddings
-- sessions
-- project_profiles (v0.6.0)
+When you call:
 
-
-
-## Fake Embedding Mode for Tests
-
-Real embeddings are disabled during tests.
-
-You can monkeypatch:
-
-```python
-monkeypatch.setattr(
-    "multimodal_agent.core.embedding.embed_text",
-    lambda text, model: [0.1, 0.2, 0.3],
-)
 ```
-This ensures:
-
-- no API calls
-- consistent deterministic vectors
-
-## **Clearing Memory**
-
-```bash
-agent clear
+agent ask "Explain this code"
 ```
-Resets all tables.
 
-### **Example Query:**
-```python
-results = rag.search_similar("json formatting", model="default", top_k=5)
-```
-Returns list of tuples:
+or
 
-```python
-[(0.92, Chunk(...)), ...]
 ```
+agent chat
+```
+
+The agent:
+
+1. Loads recent memory (based on session)
+2. Filters noise (test content, FAKE_RESPONSE entries, etc.)
+3. Produces a context block like:
+
+```
+Previous messages:
+[user] How do I initialize a Flutter widget?
+[assistant] Use const constructors whenever possible.
+
+Current message:
+"Explain this code"
+```
+
+4. Sends it to the model.
+
+This makes the agent behave like a persistent chat assistant across CLI calls.
+
+
+## **Enabling / Disabling RAG**
+
+### **RAG ON (default)**
+
+```
+agent ask "hello"
+```
+
+### **Disable RAG**
+
+```
+agent ask "hello" --no-rag
+```
+
+This completely bypasses memory injection.
+
+---
+
+## **Memory + RAG in Chat Mode**
+
+Running:
+
+```
+agent chat --session demo
+```
+
+Starts an interactive session that:
+
+* loads previous memory for session **demo**
+* appends new interactions to memory
+* retrieves them in future calls
+
+You can resume that chat later:
+
+```
+agent chat --session demo
+```
+
+---
+
+## **How RAG Works With Project Learning**
+
+When you run:
+
+```
+agent learn-project my_app/
+```
+
+The system:
+
+1. Scans the entire project directory
+2. Builds a structured project profile
+3. Stores it as RAG memory:
+
+```
+role = project_profile
+session_id = "project:<package_name>"
+source = project-learning
+```
+
+You can inspect stored projects:
+
+```
+agent list-projects
+```
+
+Or retrieve a profile:
+
+```
+agent show-project my_project
+```
+
+During code generation (**agent gen widget** / **screen** / **model**), this project knowledge is used IF the agent is model-driven (not stubbed in tests).
+
+---
+
+## **RAG in Offline Mode**
+
+When **GOOGLE_API_KEY** is missing:
+
+* The agent enters **offline fake mode**
+* RAG memory still works
+* Model returns deterministic **FAKE_RESPONSE**
+
+This allows full offline testing of the RAG subsystem.
+
+Example stored chunk:
+
+```
+{
+  "role": "assistant",
+  "content": "FAKE_RESPONSE: test",
+  "source": "ask"
+}
+```
+
+
+## **Database Location**
+
+Default path:
+
+```
+~/.multimodal_agent/memory.db
+```
+
+Override it:
+
+```
+export MULTIMODAL_AGENT_DB=/custom/path/memory.db
+```
+
+
+## **Planned Enhancements (v0.9+)**
+
+- Vector search (Lite model)
+
+-   Relevance scoring instead of chronological retrieval
+
+-   Project-level embeddings
+
+-   Query-aware memory selection
+
+
+## **Summary**
+
+| **Feature**              | **Status** |
+| ------------------------------ | ---------------- |
+| Persistent memory              | ✔               |
+| Session-based retrieval        | ✔               |
+| Project profile memory         | ✔               |
+| Offline mode support           | ✔               |
+| Noise cleaning                 | ✔               |
+| Vector search                  | ✘*(planned)*  |
+| Metadata-based query filtering | ✘*(planned)*  |

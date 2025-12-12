@@ -1,89 +1,163 @@
 # Quickstart
 
-Below are the minimum examples needed to use the agent.
+Welcome to **Multimodal-Agent** — a lightweight, production-ready wrapper around Google Gemini with RAG, CLI tools, and Flutter code generation.
+
+This guide helps you get running in under a minute.
 
 
+## Install
 
-```python
-from multimodal_agent import MultiModalAgent
-
-agent = MultiModalAgent()
-resp = agent.ask("Tell me something interesting about the universe.")
-print(resp.text)
+```bash
+pip install multimodal-agent
+```
+Set your API key:
+```bash
+export GOOGLE_API_KEY="your-key-here"
 ```
 
-## Image + Text Generation
+No API key?
 
+The library automatically falls back to offline fake mode, returning predictable stub responses for testing and CI.
+
+## Ask Questions (Text)
+```bash
+agent ask "Explain reactive programming in Flutter"
+```
+
+JSON output:
+```bash
+agent ask "give me a summary" --json
+```
+
+
+
+## Ask With an Image
+```bash
+agent image ./photo.png "What is shown in this picture?"
+```
+
+
+
+## Start Chat Session
+```bash
+agent chat
+```
+
+Chat sessions preserve context automatically unless disabled:
+```bash
+agent chat --no-rag
+```
+
+
+⸻
+
+## Generate Flutter Code (v0.8.0)
+
+Generate a widget
+```bash
+agent gen widget CoolWidget
+```
+
+Stateful:
+```bash
+agent gen widget CoolCounter --stateful
+```
+
+Generate a screen
+```bash
+agent gen screen HomeScreen
+```
+
+Generate a model
+```bash
+agent gen model UserProfile
+```
+
+Overwrite existing files:
+```bash
+agent gen widget CardItem --override
+```
+
+Files are created inside:
+```bash
+lib/widgets/
+lib/screens/
+lib/models/
+```
+
+Class names are automatically sanitized (e.g., 123temp → W123temp).
+
+
+## Use Python API
 ```python
-from multimodal_agent import MultiModalAgent
+from multimodal_agent.core.agent_core import MultiModalAgent
+
+agent = MultiModalAgent()
+
+response = agent.ask("Explain what a vector database is.")
+print(response.text)
+```
+
+With an image:
+```python
 from multimodal_agent.utils import load_image_as_part
 
-agent = MultiModalAgent()
-
-image = load_image_as_part("cat.jpg")
-resp = agent.ask_with_image("Describe this cat.", image)
-
+img = load_image_as_part("cat.png")
+resp = agent.ask_with_image("Describe this cat", img)
 print(resp.text)
 ```
-
-## CLI Quickstart
-
-```bash
-agent ask "hello world"
-agent image photo.jpg "what do you see?"
-agent chat
-agent --version
-agent --debug ask "hello"
-```
-
-### **Choosing Models**
-
-You can override the default model from CLI or config:
-```bash
-agent config set-chat-model gemini-2.5-flash
-```
-
-## Error Handling Example
-
+Offline mode example (no API key):
 ```python
-from multimodal_agent import MultiModalAgent
-from multimodal_agent.errors import AgentError
-
 agent = MultiModalAgent()
-
-try:
-    print(agent.ask("hello").text)
-except AgentError as e:
-    print("The request failed:", e)
+resp = agent.ask("hello")
+print(resp.text)     # → FAKE_RESPONSE: hello
 ```
 
-## JSON Response Mode (v0.3.0)
+## Inspect RAG Memory
 
-The agent can return structured JSON:
-
-```python
-from multimodal_agent import MultiModalAgent
-
-agent = MultiModalAgent(enable_rag=False)
-
-resp = agent.ask(
-    "Return a JSON person object.",
-    response_format="json"
-)
-
-print(resp.data)  # → Python dict
+Show stored messages:
+```bash
+agent history show
+```
+Clear memory:
+```bash
+agent history clear
+```
+Summarize history using the model:
+```bash
+agent history summary
 ```
 
-`<strong>`Supported behavior`</strong>`
-
-- Accepts raw JSON responses
-- Removes ```json fenced blocks
-- Fallback to {"raw": "..."}
-- Works identically in offline FakeResponse mode
-- Returns an AgentResponse with:
-
-```python
-resp.text  # original text
-resp.data  # parsed JSON dict
-resp.usage # token usage (dict or None)
+## Run the API Server
+```bash
+agent server --port 8000
 ```
+
+The server exposes endpoints for:
+	•	text queries
+	•	image + text
+	•	project learning
+	•	metadata inspection
+
+
+## Learn a Project (Code-Aware RAG)
+
+```bash
+agent learn-project ./my_flutter_app
+```
+This stores a structured project profile in the RAG database.
+
+List stored projects:
+```bash
+agent list-projects
+```
+
+
+## Next Steps
+	•	Explore the CLI reference￼
+	•	Learn about Flutter code generation￼
+	•	Read the Python API guide￼
+
+⸻
+
+You’re ready to use Multimodal-Agent for code generation, RAG, multimodal chat, and AI-assisted development workflows.
