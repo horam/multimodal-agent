@@ -1,0 +1,971 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A modern multimodal AI agent built on Google Gemini.">
+      
+      
+        <meta name="author" content="Horam">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Memory System (RAG Memory) - Multimodal Agent</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#memory-system-rag-memory" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Multimodal Agent" class="md-header__button md-logo" aria-label="Multimodal Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Multimodal Agent
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Memory System (RAG Memory)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/horam/multimodal-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    horam/multimodal-agent
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Usage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../agent/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Agent API
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../errors/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Errors & Exceptions
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../logging/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Logging
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../examples/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Examples
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/multimodal_agent/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Multimodal Agent" class="md-nav__button md-logo" aria-label="Multimodal Agent" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Multimodal Agent
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/horam/multimodal-agent" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    horam/multimodal-agent
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/multimodal_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    multimodal_agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="memory-system-rag-memory"><strong>Memory System (RAG Memory)</strong></h1>
+<p>The <strong>memory system</strong> is a lightweight Retrieval-Augmented-Generation (RAG) layer built on top of a persistent <strong>SQLite database</strong>.</p>
+<p>Every interaction with the agent can be stored, retrieved, summarized, or cleared.</p>
+<p>Memory is used by the agent to:</p>
+<ul>
+<li><strong>Maintain </strong><strong>context across conversations</strong></li>
+<li>Retrieve relevant past answers</li>
+<li><strong>Store </strong><strong>project profiles</strong> (via agent learn-project<strong>)</strong></li>
+<li>Improve long chats without sending long prompts</li>
+<li>Provide stable behavior between CLI calls and sessions</li>
+</ul>
+<h2 id="overview"><strong>Overview</strong></h2>
+<p>The memory system has three core components:</p>
+<h3 id="sqliteragstore"><strong>SQLiteRAGStore</strong></h3>
+<p>A simple, fast, file-based persistence layer located at:</p>
+<div class="highlight"><pre><span></span><code>~/.multimodal_agent/memory.db
+</code></pre></div>
+<p>Controls:</p>
+<ul>
+<li>Insert memory chunks</li>
+<li>Query by session</li>
+<li>Query by semantic search (planned)</li>
+<li>Store project profiles</li>
+<li>Clear or delete entries</li>
+</ul>
+<h3 id="memory-chunk-format"><strong>Memory Chunk Format</strong></h3>
+<p>Each memory entry is saved with the following schema:</p>
+<table>
+<thead>
+<tr>
+<th><strong>Column</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>Unique identifier</td>
+</tr>
+<tr>
+<td>content</td>
+<td>Raw text stored</td>
+</tr>
+<tr>
+<td>role</td>
+<td>"user"<strong>,</strong>"assistant"<strong>,</strong>"system"<strong>,</strong>"project_profile"</td>
+</tr>
+<tr>
+<td>session_id</td>
+<td>Logical session grouping</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>Timestamp</td>
+</tr>
+<tr>
+<td>source</td>
+<td>"chat"<strong>,</strong>"ask"<strong>,</strong>"project-learning"<strong>,</strong>"test"<strong>, etc.</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Example JSON block stored inside the chunk:</p>
+<div class="highlight"><pre><span></span><code>{
+  &quot;type&quot;: &quot;message&quot;,
+  &quot;content&quot;: &quot;How do I format code?&quot;,
+  &quot;role&quot;: &quot;user&quot;
+}
+</code></pre></div>
+<hr />
+<h3 id="integration-with-the-agent"><strong>Integration with the Agent</strong></h3>
+<p>Memory is automatically used in:</p>
+<ul>
+<li>agent chat</li>
+<li><strong>agent ask</strong>  <em>(unless * </em>--no-rag*<em> used)</em></li>
+<li><strong>Project learning (</strong>agent learn-project<strong>)</strong></li>
+</ul>
+<p>When enabled, the agent retrieves the <strong>most recent and clean</strong> memory chunks and includes them before generating a response.</p>
+<h2 id="how-memory-is-used-during-a-query"><strong>How Memory Is Used During a Query</strong></h2>
+<h3 id="user-makes-request"><strong>User makes request</strong></h3>
+<p>→ The agent checks whether RAG is enabled.</p>
+<h3 id="if-enabled"><strong>If enabled</strong></h3>
+<p>→ Retrieves the most relevant recent memory chunks.</p>
+<p>→ Adds them to the model input.</p>
+<h3 id="after-producing-an-answer"><strong>After producing an answer</strong></h3>
+<p>→ The agent stores the interaction:</p>
+<div class="highlight"><pre><span></span><code>role=user   → content=prompt
+role=assistant → text=response
+</code></pre></div>
+<h3 id="memory-grows-over-time"><strong>Memory grows over time</strong></h3>
+<p>The agent becomes context-aware across sessions and CLI calls.</p>
+<h2 id="session-based-memory"><strong>Session-Based Memory</strong></h2>
+<p>Every interaction can be associated with a <strong>session ID</strong>:</p>
+<div class="highlight"><pre><span></span><code>agent chat --session my-app
+agent ask &quot;Hello&quot; --session design-docs
+</code></pre></div>
+<p>If no session is given:</p>
+<ul>
+<li><strong>agent ask</strong> uses a <strong>stateless ephemeral session</strong></li>
+<li><strong>agent chat</strong> creates or resumes a session automatically</li>
+</ul>
+<p>This avoids cross-contamination between unrelated tasks.</p>
+<h2 id="managing-memory"><strong>Managing Memory</strong></h2>
+<p>The CLI provides several tools:</p>
+<h3 id="show-memory"><strong>Show Memory</strong></h3>
+<div class="highlight"><pre><span></span><code>agent history show
+</code></pre></div>
+<p>Options:</p>
+<div class="highlight"><pre><span></span><code>--limit 100
+--session my-session
+--clean          # hides noise: FAKE_RESPONSE, tests, profiles
+</code></pre></div>
+<hr />
+<h3 id="clear-all-memory"><strong>Clear All Memory</strong></h3>
+<div class="highlight"><pre><span></span><code>agent history clear
+</code></pre></div>
+<p>This wipes <strong>all</strong> memory chunks from the SQLite database.</p>
+<hr />
+<h3 id="delete-a-specific-chunk"><strong>Delete a Specific Chunk</strong></h3>
+<div class="highlight"><pre><span></span><code>agent history delete &lt;chunk_id&gt;
+</code></pre></div>
+<hr />
+<h3 id="summarize-memory"><strong>Summarize Memory</strong></h3>
+<p>Uses the model to summarize stored chunks:</p>
+<div class="highlight"><pre><span></span><code>agent history summary --limit 200
+</code></pre></div>
+<h2 id="project-learning-memory"><strong>Project Learning Memory</strong></h2>
+<p>When you run:</p>
+<div class="highlight"><pre><span></span><code>agent learn-project /path/to/project
+</code></pre></div>
+<p>The tool generates a <strong>project profile</strong> containing:</p>
+<ul>
+<li>package name</li>
+<li>directories</li>
+<li>file types</li>
+<li>dependencies</li>
+<li>source file summaries</li>
+<li>semantic markers</li>
+</ul>
+<p>This profile is stored in memory using:</p>
+<div class="highlight"><pre><span></span><code>role = &quot;project_profile&quot;
+source = &quot;project-learning&quot;
+session_id = &quot;project:&lt;package_name&gt;&quot;
+</code></pre></div>
+<p>You can list stored projects:</p>
+<div class="highlight"><pre><span></span><code>agent list-projects
+</code></pre></div>
+<p>And inspect one:</p>
+<div class="highlight"><pre><span></span><code>agent show-project my-project-id
+</code></pre></div>
+<h2 id="offline-mode-interaction"><strong>Offline Mode Interaction</strong></h2>
+<p>If <strong>GOOGLE_API_KEY</strong> is missing:</p>
+<ul>
+<li><strong>the model generates a </strong><strong>deterministic FAKE_RESPONSE</strong></li>
+<li><strong>memory </strong><strong>still works</strong></li>
+<li>no network calls occur</li>
+</ul>
+<p>This makes offline testing easy.</p>
+<p>Memory chunk example in offline mode:</p>
+<div class="highlight"><pre><span></span><code>{
+  &quot;type&quot;: &quot;message&quot;,
+  &quot;content&quot;: &quot;FAKE_RESPONSE: test&quot;,
+  &quot;role&quot;: &quot;assistant&quot;
+}
+</code></pre></div>
+<h2 id="memory-file-location"><strong>Memory File Location</strong></h2>
+<p>On macOS/Linux:</p>
+<div class="highlight"><pre><span></span><code>~/.multimodal_agent/memory.db
+</code></pre></div>
+<p>On Windows:</p>
+<div class="highlight"><pre><span></span><code>%USERPROFILE%\.multimodal_agent\memory.db
+</code></pre></div>
+<p>You can override path via environment variable:</p>
+<div class="highlight"><pre><span></span><code>export MULTIMODAL_AGENT_DB=/custom/path/agent.db
+</code></pre></div>
+<h2 id="best-practices"><strong>Best Practices</strong></h2>
+<h3 id="use-sessions-for-large-or-long-term-tasks"><strong>Use sessions for large or long-term tasks</strong></h3>
+<div class="highlight"><pre><span></span><code>agent chat --session flutter-app
+</code></pre></div>
+<h3 id="clear-memory-when-switching-topics"><strong>Clear memory when switching topics</strong></h3>
+<div class="highlight"><pre><span></span><code>agent history clear
+</code></pre></div>
+<h3 id="use-project-profiles-for-codebases"><strong>Use project profiles for codebases</strong></h3>
+<div class="highlight"><pre><span></span><code>agent learn-project ./my_flutter_app
+</code></pre></div>
+<h3 id="use-no-rag-for-pure-llm-answers"><strong>Use</strong> <strong>--no-rag for pure LLM answers</strong></h3>
+<div class="highlight"><pre><span></span><code>agent ask &quot;What is 2+2?&quot; --no-rag
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.indexes", "toc.integrate", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
