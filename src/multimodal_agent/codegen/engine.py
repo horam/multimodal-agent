@@ -3,9 +3,17 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from multimodal_agent.codegen.enum_template import (
+    build_enum_fallback,
+    build_enum_prompt,
+)
 from multimodal_agent.codegen.model_template import (
     build_model_fallback,
     build_model_prompt,
+)
+from multimodal_agent.codegen.repository_template import (
+    build_repository_fallback,
+    build_repository_prompt,
 )
 from multimodal_agent.codegen.screen_template import (
     build_screen_fallback,
@@ -21,7 +29,7 @@ from multimodal_agent.config import get_config
 
 class CodegenEngine:
     """
-    v0.8.0 Core engine for generating Flutter code using the agent.
+    v0.9.0 Core engine for generating Flutter code using the agent.
 
     Responsibilities:
     - Detect Flutter project root (contains pubspec.yaml)
@@ -32,7 +40,8 @@ class CodegenEngine:
     """
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or "gemini-2.0-flash"
+        engine_config = get_config()
+        self.model = model or engine_config["chat_model"]
 
     # Project Root Detection
     def detect_project_root(self, start_path: str | Path) -> Path:
@@ -104,7 +113,12 @@ class CodegenEngine:
 
         return code_block.strip()
 
-    def validate_and_clean(self, code: str, expected_class: str) -> str:
+    def validate_and_clean(
+        self,
+        code: str,
+        expected_class: str,
+        kind: str,
+    ) -> str:
         """
         Final cleanup + validation to ensure output is safe Dart code.
         """
@@ -123,21 +137,24 @@ class CodegenEngine:
 
         passed_header = False
         for line in lines:
-            if line.strip().startswith(("class ", "import ")):
+            if line.strip().startswith(("class ", "import ", "enum ")):
                 passed_header = True
             if passed_header:
                 cleaned.append(line)
 
         text = "\n".join(cleaned).strip() or text
 
-        # Ensure import exists
-        # text = self.ensure_material_import(text)
-
         # Ensure class name exists
-        if f"class {expected_class}" not in text:
-            raise ValueError(
-                f"Generated code does not contain class `{expected_class}`."
-            )
+        if kind in {"widget", "screen", "model", "repository"}:
+            if f"class {expected_class}" not in text:
+                raise ValueError(
+                    f"Generated code does not contain class `{expected_class}`."  # noqa
+                )
+        if kind == "enum":
+            if f"enum {expected_class}" not in text:
+                raise ValueError(
+                    f"Generated code does not contain enum `{expected_class}`."
+                )
 
         # Deduplicate imports
         lines = text.splitlines()
@@ -181,6 +198,8 @@ class CodegenEngine:
         override: bool = False,
         stateful: bool = False,
         description: str = "",
+        entity: str | None = None,
+        values: list[str] | None = None,
     ) -> Path:
         """
         Determine output path, call generation, write file.
@@ -194,7 +213,9 @@ class CodegenEngine:
             out_path = root_path / "lib" / "widgets" / f"{snake_case}.dart"
             if self.is_offline_mode():
                 content = self.generate_fallback_code(
-                    kind=kind, class_name=class_name, stateful=stateful
+                    kind=kind,
+                    class_name=class_name,
+                    stateful=stateful,
                 )
             else:
                 content = self.generate_widget(
@@ -223,51 +244,47 @@ class CodegenEngine:
                     kind=kind,
                     class_name=class_name,
                 )
+
             else:
                 content = self.generate_model(name, description=description)
+
+        elif kind == "enum":
+            out_path = root_path / "lib" / "enums" / f"{snake_case}.dart"
+            if self.is_offline_mode():
+                content = self.generate_fallback_code(
+                    kind=kind,
+                    class_name=class_name,
+                    values=values,
+                )
+            else:
+                content = self.generate_enum(
+                    name,
+                    description=description,
+                    values=values,
+                )
+
+        elif kind == "repository":
+            out_path = root_path / "lib" / "repositories" / f"{snake_case}.dart"  # noqa
+
+            if self.is_offline_mode():
+                content = self.generate_fallback_code(
+                    kind=kind,
+                    class_name=class_name,
+                    entity=entity,
+                )
+            else:
+                content = self.generate_repository(
+                    name,
+                    description=description,
+                    entity=entity,
+                )
 
         else:
             raise ValueError(f"Unknown generation type: {kind}")
 
-        cleaned = self.validate_and_clean(content, class_name)
+        cleaned = self.validate_and_clean(content, class_name, kind=kind)
 
         return self.safe_write(out_path, cleaned, override=override)
-
-    def generate_widget(
-        self,
-        name: str,
-        stateful=False,
-        description: str = "",
-    ) -> str:
-        class_name = sanitize_class_name(name)
-        content = self.run(
-            build_widget_prompt(
-                class_name,
-                stateful=stateful,
-                description=description,
-            )
-        )
-        return content
-
-    def generate_screen(self, name: str, description: str = "") -> str:
-        class_name = sanitize_class_name(name)
-        content = self.run(
-            build_screen_prompt(
-                class_name,
-                description=description,
-            )
-        )
-        return content
-
-    def generate_model(self, name: str, description: str = "") -> str:
-        class_name = sanitize_class_name(name)
-        content = self.run(
-            build_model_prompt(
-                class_name,
-                description=description,
-            )
-        )
-        return content
 
     def ensure_material_import(self, code: str) -> str:
         """
@@ -310,6 +327,8 @@ class CodegenEngine:
         kind: str,
         class_name: str,
         stateful: bool = False,
+        entity: str | None = None,
+        values: list[str] | None = None,
     ) -> str:
         class_name = sanitize_class_name(class_name)
         if kind == "widget":
@@ -324,4 +343,75 @@ class CodegenEngine:
         if kind == "model":
             return build_model_fallback(class_name)
 
+        if kind == "enum":
+            return build_enum_fallback(class_name, values=values)
+
+        if kind == "repository":
+            return build_repository_fallback(class_name, entity=entity)
+
         raise ValueError(f"Unknown generation type: {kind}")
+
+    def generate_widget(
+        self,
+        name: str,
+        stateful=False,
+        description: str = "",
+    ) -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_widget_prompt(
+                class_name,
+                stateful=stateful,
+                description=description,
+            )
+        )
+        return content
+
+    def generate_screen(self, name: str, description: str = "") -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_screen_prompt(
+                class_name,
+                description=description,
+            )
+        )
+        return content
+
+    def generate_model(self, name: str, description: str = "") -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_model_prompt(
+                class_name,
+                description=description,
+            )
+        )
+        return content
+
+    def generate_enum(
+        self,
+        name: str,
+        description: str = "",
+        values: list[str] | None = None,
+    ) -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_enum_prompt(
+                class_name,
+                values=values,
+                description=description,
+            )
+        )
+        return content
+
+    def generate_repository(
+        self, name: str, description: str = "", entity: Optional[str] = None
+    ) -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_repository_prompt(
+                class_name,
+                entity=entity,
+                description=description,
+            )
+        )
+        return content

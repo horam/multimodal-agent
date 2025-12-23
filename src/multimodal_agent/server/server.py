@@ -19,14 +19,21 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from multimodal_agent import MultiModalAgent
+from multimodal_agent import MultiModalAgent, config
+from multimodal_agent.codegen.engine import CodegenEngine
 from multimodal_agent.project_scanner import scan_project
 from multimodal_agent.rag.rag_store import SQLiteRAGStore
 from multimodal_agent.server.server_models import (
     AskRequest,
     ChatRequest,
     ChatResponse,
+    GenerateCodeResponse,
+    GenerateEnumRequest,
+    GenerateModelRequest,
+    GenerateRepositoryRequest,
     GenerateRequest,
+    GenerateScreenRequest,
+    GenerateWidgetRequest,
     HistoryItem,
     HistoryResponse,
     LearnProjectRequest,
@@ -46,6 +53,9 @@ rag = SQLiteRAGStore(
 )
 agent = MultiModalAgent(rag_store=rag, enable_rag=True)
 
+engine_config = config.get_config()
+model = engine_config.get("chat_model")
+engine = CodegenEngine(model=model)
 
 # FastAPI app
 app = FastAPI(
@@ -131,8 +141,34 @@ async def chat(request: ChatRequest):
     - Uses `message` instead of `prompt`.
     - Supports optional `session_id` for multi-turn conversations.
     """
+
+    prompt = request.message
+
+    if request.context:
+        context = request.context
+
+        context_block = []
+
+        if context.get("language"):
+            context_block.append(f"Language: {context['language']}")
+
+        if context.get("fileName"):
+            context_block.append(f"File: {context['fileName']}")
+
+        if context.get("selection"):
+            context_block.append(f"Selected code:\n{context['selection']}")
+
+        if context_block:
+            prompt = (
+                "You are assisting a developer inside an IDE.\n\n"
+                "Context:\n"
+                + "\n".join(f"- {line}" for line in context_block)
+                + "\n\nUser question:\n"
+                + request.message
+            )
+
     resp = agent.ask(
-        request.message,
+        prompt,
         response_format=request.response_format or "text",
         session_id=request.session_id,
         rag_enabled=not request.no_rag,
@@ -425,3 +461,80 @@ def load_project_api(project_id: str):
         "id": project_id,
         "profile": profile,
     }
+
+
+@app.post("/generate/widget", tags=["generate"])
+def generate_widget(request: GenerateWidgetRequest):
+    return generate_api_helper(
+        request,
+        kind="widget",
+    )
+
+
+@app.post("/generate/screen", tags=["generate"])
+def generate_screen(request: GenerateScreenRequest):
+    return generate_api_helper(
+        request,
+        kind="screen",
+    )
+
+
+@app.post("/generate/model", tags=["generate"])
+def generate_model(request: GenerateModelRequest):
+    return generate_api_helper(
+        request,
+        kind="model",
+    )
+
+
+@app.post("/generate/enum", tags=["generate"])
+def generate_enum(request: GenerateEnumRequest):
+    return generate_api_helper(
+        request,
+        kind="enum",
+    )
+
+
+@app.post("/generate/repository", tags=["generate"])
+def generate_repository(request: GenerateRepositoryRequest):
+    return generate_api_helper(
+        request,
+        kind="repository",
+    )
+
+
+def generate_api_helper(
+    request,
+    kind: str,
+) -> GenerateCodeResponse:
+    if not request.name or not request.name[0].isalpha():
+        raise HTTPException(
+            400,
+            "Name must start with a letter (valid Dart identifier)",
+        )
+
+    try:
+        root = Path(request.project_root).resolve()
+        if not root.exists():
+            raise HTTPException(400, "Invalid project_root")
+
+        path = engine.generate_and_write(
+            kind=kind,
+            name=request.name,
+            root=root,
+            override=getattr(request, "override", False),
+            stateful=getattr(request, "stateful", False),
+            description=request.description or "",
+            entity=getattr(request, "entity", None),
+            values=getattr(request, "values", None),
+        )
+
+        return GenerateCodeResponse(
+            code=path.read_text(),
+            path=str(path),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exception:
+        raise HTTPException(400, str(exception))

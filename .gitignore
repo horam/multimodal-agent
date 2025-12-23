@@ -26,5 +26,13 @@ dist/
 .coverage
 htmlcov/
 
+# VS Code extension
+vscode-extension/node_modules/
+vscode-extension/dist/
+vscode-extension/out/
+vscode-extension/.vscode-test/
+vscode-extension/coverage/
+vscode-extension/*.vsix
+
 # OS files
 .DS_Store

@@ -2,11 +2,20 @@
 
 *A lightweight, production-ready multimodal wrapper for Google Gemini with RAG, image input, JSON mode, project learning, session memory, and a clean CLI & server.*
 
+
+If you are using the **free tier**, you may encounter temporary errors such as:
+
+- `429 RESOURCE_EXHAUSTED`
+- `Quota exceeded`
+- Requests failing after several generations
+
+This is **expected behavior** and **not a bug** in Multimodal Agent.
+
 ---
 
 ## Features
 
-### Core LLM Capabilities
+### **Core LLM Capabilities**
 
 * Flutter code generation (widgets, screens, models)
 * Unified agent for **text, image, and chat** interactions
@@ -64,6 +73,8 @@ pip install -e .
 ---
 
 # Configuration
+Multimodal Agent uses a **single source of truth** for model selection via
+`~/.multimodal_agent/config.yaml`.
 
 ### Show current configuration:
 ```bash
@@ -104,8 +115,43 @@ embedding_model: text-embedding-004
 api_key: YOUR_KEY
 ```
 
+### Default configuration
+
+```yaml
+chat_model: gemini-2.0-flash
+image_model: gemini-2.0-flash
+embedding_model: text-embedding-004
+```
+⚠️ Older models such as gemini-1.5-pro are no longer supported by the Gemini API and will cause 404 NOT_FOUND errors.
+
+Always ensure your configured models exist in:
+
+https://ai.google.dev/gemini-api/docs/models
+
+---
+
+
+## CLI vs Server vs VS Code Extension
+
+Multimodal Agent has **three execution paths**:
+
+### 1. CLI (`agent chat`, `agent ask`)
+- Talks **directly** to Gemini
+- May continue working even if the server is failing
+- Best for debugging and verification
+
+### 2. HTTP Server (`agent server`)
+- Acts as a bridge for the VS Code extension
+- Enforces request timeouts
+- Returns HTTP errors (400 / 429 / 500)
+
+### 3. VS Code Extension
+- Depends on the HTTP server
+- Will show errors like:
+
 ---
 ## Quick Start
+
 ### **Text Question**
 
 ```bash
@@ -192,6 +238,20 @@ agent inspect-project my_app/
 ```
 
 ---
+
+## VS Code Extension (Pre-Release)
+
+Until v1.0.0, the VS Code extension is available via manual install.
+
+### Install from source
+
+```bash
+git clone https://github.com/horam/multimodal-agent.git
+cd multimodal-agent/vscode-extension
+npm install
+npm run build
+code --install-extension multimodal-agent-*.vsix
+```
 
 ### Python API Example
 
@@ -442,7 +502,7 @@ class UserProfile {
 Input → Class Name
 
 | Input |	Output |
-------------------
+|--------|----------|
 | my widget |	MyWidget |
 | my-widget	| MyWidget |
 | my_widget	| MyWidget |
@@ -453,32 +513,34 @@ Input → Class Name
 Input → snake_case
 
 |Input  |	Output  |
---------------------
+|-------|----------|
 |MyWidget |	my_widget |
------------------------
 |MyWidgetScreen |	my_widget_screen  |
--------------------------------------
 |my widget  |	my_widget |
---------------------------------------
 |my@invalid-name  |	myinvalid_name  |
 
-🔥 Offline Mode (No API Key)
+
+**Offline Mode (No API Key)**
+
 If no API key is configured:
 
-Text mode
-javascript
-Copy code
+### **Text mode**
+```javascript
 FAKE_RESPONSE: <your prompt>
-JSON mode
+```
+### **JSON mode**
+```javascript
 text contains JSON string
+```
 
 data is None (tests enforce this)
 
 Example:
 
-json
-Copy code
+```json
 {"message": "hello"}
+```
+
 This is intended for CI and local testing.
 
 ## Config
@@ -521,18 +583,53 @@ This includes:
 * Code generation
 
 
+## Troubleshooting
+
+### Error: `429 RESOURCE_EXHAUSTED`
+
+Cause:
+- Gemini API free-tier quota exceeded
+
+Solution:
+- Wait for quota reset (usually within 24 hours)
+- Or upgrade your Gemini API plan
+
+---
+
+### Error: `404 NOT_FOUND (model)`
+
+Cause:
+- Using a deprecated or unsupported Gemini model
+
+Solution:
+- Update `chat_model` in `config.yaml`
+- Restart the agent server
+
+---
+
+### CLI works but VS Code extension fails
+
+Cause:
+- Server timeout or quota exhaustion
+
+Solution:
+- Check server logs
+- Prefer CLI while quota resets
+
+
 ## Roadmap
-- Generate repository classes
-
-- Generate abstract classes + interfaces
-
-- Generate enums
-
-- CLI command to scaffold a full Flutter app
 
 - Local LLM mode
 
 - Plugin architecture for custom code generators
+
+- Automatic quota detection
+
+- Model failover (Flash → Flash Lite → Local)
+
+- Graceful server fallback when quota is exhausted
+
+- Extension-side retry & clearer diagnostics
 
 # License
 

@@ -254,6 +254,43 @@ Useful for:
 - Tests
 - No network access
 
+# Quota & Rate Limits (Free Tier)
+
+When using the Gemini API free tier, you may encounter:
+
+- `429 RESOURCE_EXHAUSTED`
+- Quota exceeded
+- Temporary request failures
+
+This is **expected behavior** and not a CLI bug.
+
+Notes:
+- The CLI talks **directly** to Gemini and may continue working even when the server or VS Code extension fails.
+- Requests may succeed intermittently until quota fully resets.
+
+What to do:
+- Wait for quota reset (usually within 24 hours)
+- Reduce request frequency
+- Switch to a lighter model
+- Upgrade your Gemini API plan
+
+
+# Model Availability
+
+If you configure an unsupported or deprecated model, the CLI may fail with:
+
+- `404 NOT_FOUND (model)`
+
+Fix:
+- Update your model via:
+```bash
+agent config set-model gemini-2.5-flash
+```
+
+-	Verify supported models at:
+https://ai.google.dev/gemini-api/docs/models
+
+
 # Debug Logging
 
 Enable verbose logs:

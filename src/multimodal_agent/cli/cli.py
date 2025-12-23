@@ -152,12 +152,50 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite if exists",
     )
-
     gen_model.add_argument(
         "--desc",
         type=str,
         default="",
         help="Optional description of the model (fields / purpose).",
+    )
+
+    # gen enum <name>
+    gen_enum = gen_sub.add_parser("enum", help="Generate a Dart Enum")
+    gen_enum.add_argument("name")
+    gen_enum.add_argument(
+        "--override",
+        action="store_true",
+        help="OverWrite if exists",
+    )
+    gen_enum.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the enum",
+    )
+
+    # gen repository <name>
+    gen_repository = gen_sub.add_parser(
+        "repository",
+        help="Generate a Dart repository abstraction",
+    )
+    gen_repository.add_argument("name")
+    gen_repository.add_argument(
+        "--entity",
+        type=str,
+        default=None,
+        help="Entity name the repository manages",
+    )
+    gen_repository.add_argument(
+        "--override",
+        action="store_true",
+        help="Overwrite if exists",
+    )
+    gen_repository.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the repository",
     )
 
     # format
@@ -611,6 +649,29 @@ def _main(args, parser):
                     description=getattr(args, "desc", ""),
                 )
                 print(f"Model generated at {out}")
+                return 0
+
+            if args.gen_cmd == "enum":
+                out = engine.generate_and_write(
+                    kind="enum",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    description=getattr(args, "desc", ""),
+                )
+                print(f"Enum generated at {out}")
+                return 0
+
+            if args.gen_cmd == "repository":
+                out = engine.generate_and_write(
+                    kind="repository",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    description=getattr(args, "desc", ""),
+                    entity=getattr(args, "entity", None),
+                )
+                print(f"Repository generated at {out}")
                 return 0
 
         elif args.command == "config":

@@ -161,6 +161,56 @@ Useful for:
 
 ---
 
+
+
+## **Quota & Rate Limit Behavior (Free Tier)**
+
+When using the Gemini API free tier, the server may return:
+
+- **HTTP 429 – RESOURCE_EXHAUSTED**
+- **Quota exceeded**
+- **Request timeout**
+
+This is **expected behavior** and not a server bug.
+
+Typical causes:
+- Daily request quota exhausted
+- Requests-per-minute (RPM) exceeded
+- Token limits reached
+
+Behavior:
+- Server returns **HTTP 429**
+- VS Code extension shows an error notification
+- CLI may still work temporarily due to different execution paths
+
+Solutions:
+- Wait for quota reset (usually within 24 hours)
+- Reduce request frequency
+- Switch to a lighter model
+- Upgrade your Gemini API plan
+
+While quota is exhausted, **offline fake mode** continues to work.
+
+---
+
+## **Model Configuration Errors**
+
+If the configured model does not exist or is deprecated, the server may return:
+
+- **HTTP 400**
+- **404 NOT_FOUND (model)**
+
+Example:
+```bash
+models/gemini-1.5-pro is not supported
+```
+
+Fix:
+- 	Update chat_model or image_model in ~/.multimodal_agent/config.yaml
+- 	Restart the agent server
+- 	Verify available models at:
+https://ai.google.dev/gemini-api/docs/models
+
 ## **Error Handling**
 
 All errors follow a consistent schema:
@@ -182,6 +232,8 @@ Internal agent errors:
   "status": 500
 }
 ```
+
+Note: The CLI may continue working while the server fails due to stricter HTTP timeouts and quota enforcement.
 
 ---
 

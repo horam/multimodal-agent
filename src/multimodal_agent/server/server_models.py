@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # Request Models
@@ -12,6 +12,12 @@ class AskRequest(BaseModel):
 
 
 class GenerateRequest(BaseModel):
+    """
+    Deprecated.
+    Generic generate endpoint. Prefer typed endpoints:
+    /generate/widget, /generate/screen, /generate/model, ...
+    """
+
     prompt: str
     language: str | None = None
     json: bool = True
@@ -37,6 +43,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     no_rag: bool = False
     response_format: Optional[str] = None
+    context: Optional[dict] = None
 
 
 class ChatResponse(BaseModel):
@@ -65,3 +72,57 @@ class SummaryResponse(BaseModel):
     summary: str
     limit: int
     session: Optional[str] = None
+
+
+class BaseGenerateRequest(BaseModel):
+    name: str = Field(..., description="Dart class name")
+    project_root: str = Field(
+        ...,
+        description="Absolute path to Flutter project root",
+        example="Users/owner/projects/my_app",
+    )
+
+    description: Optional[str] = Field(
+        default=None,
+        description="Optional natural language description",
+    )
+    override: bool = Field(
+        default=False,
+        description="Overwrite existing file if true",
+    )
+
+
+class GenerateWidgetRequest(BaseGenerateRequest):
+    stateful: bool = Field(
+        default=False,
+        description="Generate StatefulWidget if true",
+    )
+
+
+class GenerateScreenRequest(BaseGenerateRequest):
+    pass
+
+
+class GenerateModelRequest(BaseGenerateRequest):
+    pass
+
+
+class GenerateEnumRequest(BaseGenerateRequest):
+    values: Optional[list[str]] = Field(
+        default=None,
+        description="Optional enum values",
+        example=["pending", "paid", "shipped"],
+    )
+
+
+class GenerateRepositoryRequest(BaseGenerateRequest):
+    entity: Optional[str] = Field(
+        default=None,
+        description="Entity name the repository manages",
+        example="User",
+    )
+
+
+class GenerateCodeResponse(BaseModel):
+    code: str
+    path: Optional[str] = None

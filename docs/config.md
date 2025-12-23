@@ -17,7 +17,7 @@ This removes the need to pass **--model** or set the environment variable every 
 The configuration is stored inside:
 
 ```
-~/.config/multimodal_agent/config.yaml
+~/.multimodal_agent/config.yaml
 ```
 
 Example file:
@@ -25,7 +25,7 @@ Example file:
 ```
 api_key: "YOUR-KEY"
 chat_model: "gemini-2.5-flash"
-image_model: "gemini-2.5-flash"
+image_model: "gemini-2.0-flash"
 embedding_model: "text-embedding-004"
 ```
 
@@ -67,7 +67,7 @@ This updates the **chat_model** field.
 ### **Set Image Model**
 
 ```
-agent config set-image-model gemini-2.5-pro
+agent config set-image-model gemini-2.0-flash
 ```
 
 ---
@@ -118,7 +118,7 @@ This will override anything in the config file.
 
 ## **How the Agent Loads Config**
 
-1. **Load YAML config from **~/.config/multimodal_agent/config.yaml
+1. Load YAML config from **~/.multimodal_agent/config.yaml**
 2. Override with environment variables
 3. Override with CLI arguments (e.g., **--model gemini-2.5-flash**)
 

@@ -150,6 +150,58 @@ Common issues:
 | Startup timeout |	Slow environment or blocked port |
 
 
+### Quota / Rate Limit Errors (429 RESOURCE_EXHAUSTED)
+
+When using the Gemini API free tier, you may encounter:
+
+```bash
+429 RESOURCE_EXHAUSTED
+Quota exceeded
+```
+This is **expected behavior**, not a Multimodal Agent bug.
+
+Causes:
+-	Daily request limit reached
+-	Requests-per-minute (RPM) exceeded
+-	Token quota exhausted
+
+Behavior:
+-	CLI: error wrapped in AgentError
+-	Server: returns HTTP 429
+-	VS Code extension: shows a notification error
+
+Solutions:
+-	Wait for quota reset (usually within 24 hours)
+-	Reduce request frequency
+-	Switch to a lighter model (e.g. flash → flash-lite when available)
+-	Upgrade your Gemini API plan
+
+While quota is exhausted, **offline fake mode** and **local tests** continue to work.
+
+
+### Model Not Found Errors (404 NOT_FOUND)
+
+Raised when a configured Gemini model does not exist or is deprecated.
+
+Example:
+```bash
+404 NOT_FOUND: models/gemini-1.5-pro is not supported
+```
+
+Common causes:
+-	Using deprecated models (e.g. gemini-1.5-pro)
+-	Typos in model name
+-	Config file out of sync with Gemini API
+
+Fix:
+-	Update chat_model / image_model in config
+-	Restart the agent server
+-	Verify available models at:
+https://ai.google.dev/gemini-api/docs/models
+
+
+
+Note: The CLI may continue working while the server or VS Code extension fails due to stricter timeouts and quota enforcement.
 
 ## Logging and Debug Mode
 
@@ -200,7 +252,8 @@ if "class " not in code:
 |   RAG DB issues	|   AgentError  |
 |   Model API failure	|   Wrapped in AgentError   |
 |   CLI misuse	|   Argparse prints help    |
-
+| Quota exceeded (429) | AgentError / HTTP 429 |
+| Model not found (404) | AgentError / HTTP 400 |
 
 ## Raising Custom Errors
 

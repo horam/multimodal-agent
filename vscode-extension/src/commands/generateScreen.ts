@@ -1,0 +1,85 @@
+import * as vscode from "vscode";
+import axios from "axios";
+import { post } from "../api/serverClient";
+import { screenFallback, toSnakeCase } from "./fallback";
+import * as fs from "fs";
+import * as path from "path";
+
+function isServerDown(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.code === "ECONNREFUSED";
+}
+
+export async function generateScreen() {
+  const name = await vscode.window.showInputBox({
+    prompt: "Screen name",
+    placeHolder: "e.g. LoginScreen, HomeScreen",
+    validateInput: (value) =>
+      /^[A-Za-z][A-Za-z0-9_]*$/.test(value)
+        ? null
+        : "Screen name must start with a letter and be a valid Dart identifier",
+  });
+  if (!name) return;
+
+  const description = await vscode.window.showInputBox({
+    prompt: "Optional description",
+    placeHolder: "Describe UI, layout, actions, state, etc.",
+  });
+
+  const projectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!projectRoot) {
+    vscode.window.showErrorMessage("No workspace folder found.");
+    return;
+  }
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Generating screen ${name}…`,
+      cancellable: false,
+    },
+    async () => {
+      try {
+        const result = await post<{ code: string; path?: string }>(
+          "/generate/screen",
+          {
+            name,
+            description,
+            project_root: projectRoot,
+          }
+        );
+
+        if (result.path) {
+          const doc = await vscode.workspace.openTextDocument(result.path);
+          await vscode.window.showTextDocument(doc, { preview: false });
+        } else {
+          const doc = await vscode.workspace.openTextDocument({
+            language: "dart",
+            content: result.code,
+          });
+          await vscode.window.showTextDocument(doc, { preview: false });
+        }
+      } catch (err: unknown) {
+        if (isServerDown(err)) {
+          vscode.window.showWarningMessage(
+            "Server is not running. Generated a local fallback screen stub."
+          );
+
+          const code = screenFallback(name);
+
+          const snake = toSnakeCase(name);
+          const outDir = path.join(projectRoot, "lib", "screens");
+          const outPath = path.join(outDir, `${snake}.dart`);
+
+          fs.mkdirSync(outDir, { recursive: true });
+          fs.writeFileSync(outPath, code, "utf8");
+
+          const doc = await vscode.workspace.openTextDocument(outPath);
+          await vscode.window.showTextDocument(doc, { preview: false });
+          return;
+        }
+
+        // other errors already shown by serverClient
+      }
+    }
+  );
+}
