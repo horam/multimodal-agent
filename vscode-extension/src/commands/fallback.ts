@@ -8,11 +8,13 @@ export function toSnakeCase(name: string): string {
 }
 
 function pascalCase(s: string): string {
-  return sanitize(s)
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map(p => p[0].toUpperCase() + p.slice(1))
-    .join("") || "Unnamed";
+  return (
+    sanitize(s)
+      .split(/[_\s]+/)
+      .filter(Boolean)
+      .map((p) => p[0].toUpperCase() + p.slice(1))
+      .join("") || "Unnamed"
+  );
 }
 
 function lowerCamelCase(s: string): string {
@@ -25,10 +27,10 @@ export function enumFallback(name: string, values?: string[]): string {
   const enumName = pascalCase(name);
   const items =
     values && values.length
-      ? values.map(v => lowerCamelCase(v))
+      ? values.map((v) => lowerCamelCase(v))
       : ["value1", "value2", "value3"];
 
-  return `enum ${enumName} {\n${items.map(v => `  ${v},`).join("\n")}\n}\n`;
+  return `enum ${enumName} {\n${items.map((v) => `  ${v},`).join("\n")}\n}\n`;
 }
 
 // Model
@@ -110,6 +112,26 @@ class _${widget}State extends State<${widget}> {
   @override
   Widget build(BuildContext context) {
     return const SizedBox();
+  }
+}
+`;
+}
+
+export function useCaseFallback(name: string, entity?: string): string {
+  const entityType = entity ?? "void";
+  const returnType = entity ? `Future<${entityType}>` : "Future<void>";
+
+  return `
+/// OFFLINE USECASE FALLBACK
+/// Generated without server connection.
+/// Replace with real implementation.
+
+class ${name} {
+  const ${name}();
+
+  ${returnType} call() async {
+    // TODO: implement use case logic
+    throw UnimplementedError();
   }
 }
 `;

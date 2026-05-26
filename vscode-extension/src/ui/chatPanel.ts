@@ -2,10 +2,9 @@ import * as vscode from "vscode";
 import { post } from "../api/serverClient";
 import { getChatHtml } from "./chatWebview";
 
-
 const sessionId = crypto.randomUUID();
 
-export function openChatPanel(context: vscode.ExtensionContext) {
+export function openChatPanel() {
   const panel = vscode.window.createWebviewPanel(
     "multimodalAgentChat",
     "Agent",
@@ -13,7 +12,7 @@ export function openChatPanel(context: vscode.ExtensionContext) {
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-    }
+    },
   );
 
   panel.webview.html = getChatHtml();

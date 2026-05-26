@@ -3,8 +3,7 @@ import * as vscode from "vscode";
 import * as sinon from "sinon";
 import * as fs from "fs";
 import * as path from "path";
-import axios from "axios";
-import * as serverClient from "../../api/serverClient";
+import * as serverClient from "../../api/serverClient.js";
 
 suite("Generate Screen – Offline Fallback", () => {
   let postStub: sinon.SinonStub;
@@ -14,7 +13,7 @@ suite("Generate Screen – Offline Fallback", () => {
       Object.assign(new Error("ECONNREFUSED"), {
         isAxiosError: true,
         code: "ECONNREFUSED",
-      })
+      }),
     );
   });
 
@@ -31,12 +30,10 @@ suite("Generate Screen – Offline Fallback", () => {
     // Mock inputs
     const inputStub = sinon.stub(vscode.window, "showInputBox");
     inputStub.onFirstCall().resolves("DemoScreen"); // screen name
-    inputStub.onSecondCall().resolves(undefined);   // description
+    inputStub.onSecondCall().resolves(undefined); // description
 
     // Run command
-    await vscode.commands.executeCommand(
-      "multimodalAgent.generateScreen"
-    );
+    await vscode.commands.executeCommand("multimodalAgent.generateScreen");
 
     inputStub.restore();
 
@@ -44,18 +41,12 @@ suite("Generate Screen – Offline Fallback", () => {
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     assert.ok(root, "Workspace not found");
 
-    const expectedPath = path.join(
-      root,
-      "lib",
-      "screens",
-      "demo_screen.dart"
-    );
-
+    const expectedPath = path.join(root, "lib", "screens", "demo_screen.dart");
 
     // Assert file written
     assert.ok(
       fs.existsSync(expectedPath),
-      "Fallback screen file was not written"
+      "Fallback screen file was not written",
     );
 
     const content = fs.readFileSync(expectedPath, "utf8");
@@ -63,13 +54,10 @@ suite("Generate Screen – Offline Fallback", () => {
     // Assert Dart content
     assert.ok(
       content.includes("class DemoScreen extends StatelessWidget"),
-      "Screen class not generated correctly"
+      "Screen class not generated correctly",
     );
 
-    assert.ok(
-      content.includes("Scaffold"),
-      "Screen scaffold missing"
-    );
+    assert.ok(content.includes("Scaffold"), "Screen scaffold missing");
 
     // Assert editor opened correct file
     const editor = vscode.window.activeTextEditor;
@@ -77,7 +65,7 @@ suite("Generate Screen – Offline Fallback", () => {
     assert.strictEqual(
       editor.document.uri.fsPath,
       expectedPath,
-      "Opened file is not the generated screen"
+      "Opened file is not the generated screen",
     );
   });
 });

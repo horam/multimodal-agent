@@ -51,7 +51,7 @@ export async function generateRepository() {
             entity,
             description,
             project_root: projectRoot,
-          }
+          },
         );
 
         if (result.path) {
@@ -67,7 +67,7 @@ export async function generateRepository() {
       } catch (err: unknown) {
         if (isServerDown(err)) {
           vscode.window.showWarningMessage(
-            "Server is not running. Generated a local fallback repository stub."
+            "Server is not running. Generated a local fallback repository stub.",
           );
 
           const code = repositoryFallback(name, entity);
@@ -86,6 +86,6 @@ export async function generateRepository() {
 
         // other errors already shown by serverClient
       }
-    }
+    },
   );
 }

@@ -2,9 +2,9 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { assertCommandRegistered, assertExtensionActive } from "../utils.js";
 
-suite("Generate Enum UI", () => {
+suite("Refactor Code UI", () => {
   test("command is registered", async () => {
-    await assertCommandRegistered("multimodalAgent.generateEnum");
+    await assertCommandRegistered("multimodalAgent.refactor");
   });
 
   test("workspace is available", () => {

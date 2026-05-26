@@ -45,7 +45,7 @@ export async function generateScreen() {
             name,
             description,
             project_root: projectRoot,
-          }
+          },
         );
 
         if (result.path) {
@@ -61,7 +61,7 @@ export async function generateScreen() {
       } catch (err: unknown) {
         if (isServerDown(err)) {
           vscode.window.showWarningMessage(
-            "Server is not running. Generated a local fallback screen stub."
+            "Server is not running. Generated a local fallback screen stub.",
           );
 
           const code = screenFallback(name);
@@ -80,6 +80,6 @@ export async function generateScreen() {
 
         // other errors already shown by serverClient
       }
-    }
+    },
   );
 }

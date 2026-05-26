@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import * as fs from "fs";
 import * as path from "path";
 
-import * as serverClient from "../../api/serverClient";
+import * as serverClient from "../../api/serverClient.js";
 
 suite("Generate Repository – Offline Fallback", () => {
   let postStub: sinon.SinonStub;
@@ -14,7 +14,7 @@ suite("Generate Repository – Offline Fallback", () => {
       Object.assign(new Error("ECONNREFUSED"), {
         isAxiosError: true,
         code: "ECONNREFUSED",
-      })
+      }),
     );
   });
 
@@ -31,13 +31,11 @@ suite("Generate Repository – Offline Fallback", () => {
     // Mock inputs
     const inputStub = sinon.stub(vscode.window, "showInputBox");
     inputStub.onFirstCall().resolves("UserRepository"); // repo name
-    inputStub.onSecondCall().resolves("User");          // entity
-    inputStub.onThirdCall().resolves(undefined);        // description
+    inputStub.onSecondCall().resolves("User"); // entity
+    inputStub.onThirdCall().resolves(undefined); // description
 
     // Run command
-    await vscode.commands.executeCommand(
-      "multimodalAgent.generateRepository"
-    );
+    await vscode.commands.executeCommand("multimodalAgent.generateRepository");
 
     inputStub.restore();
 
@@ -48,13 +46,13 @@ suite("Generate Repository – Offline Fallback", () => {
       root,
       "lib",
       "repositories",
-      "user_repository.dart"
+      "user_repository.dart",
     );
 
     // Assert file exists
     assert.ok(
       fs.existsSync(expectedPath),
-      "Fallback repository file was not written"
+      "Fallback repository file was not written",
     );
 
     const content = fs.readFileSync(expectedPath, "utf8");
@@ -62,12 +60,12 @@ suite("Generate Repository – Offline Fallback", () => {
     // Assert Dart content
     assert.ok(
       content.includes("class UserRepository"),
-      "Repository class not generated correctly"
+      "Repository class not generated correctly",
     );
 
     assert.ok(
       content.includes("Future<List<User>>"),
-      "Entity type not reflected in repository"
+      "Entity type not reflected in repository",
     );
 
     // Assert editor opened correct file
@@ -76,7 +74,7 @@ suite("Generate Repository – Offline Fallback", () => {
     assert.strictEqual(
       editor.document.uri.fsPath,
       expectedPath,
-      "Opened file is not the generated repository"
+      "Opened file is not the generated repository",
     );
   });
 });

@@ -1,4 +1,4 @@
-import { assertCommandRegistered } from "../utils";
+import { assertCommandRegistered } from "../utils.js";
 
 suite("Generate Screen UI", () => {
   test("command is registered", async () => {

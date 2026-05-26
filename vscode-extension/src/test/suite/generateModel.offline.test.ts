@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import * as fs from "fs";
 import * as path from "path";
 
-import * as serverClient from "../../api/serverClient";
+import * as serverClient from "../../api/serverClient.js";
 
 suite("Generate Model – Offline Fallback", () => {
   let postStub: sinon.SinonStub;
@@ -14,7 +14,7 @@ suite("Generate Model – Offline Fallback", () => {
       Object.assign(new Error("ECONNREFUSED"), {
         isAxiosError: true,
         code: "ECONNREFUSED",
-      })
+      }),
     );
   });
 
@@ -31,12 +31,10 @@ suite("Generate Model – Offline Fallback", () => {
     // Mock inputs
     const inputStub = sinon.stub(vscode.window, "showInputBox");
     inputStub.onFirstCall().resolves("UserProfile"); // model name
-    inputStub.onSecondCall().resolves(undefined);    // description
+    inputStub.onSecondCall().resolves(undefined); // description
 
     // Run command
-    await vscode.commands.executeCommand(
-      "multimodalAgent.generateModel"
-    );
+    await vscode.commands.executeCommand("multimodalAgent.generateModel");
 
     inputStub.restore();
 
@@ -44,17 +42,12 @@ suite("Generate Model – Offline Fallback", () => {
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     assert.ok(root, "Workspace not found");
 
-    const expectedPath = path.join(
-      root,
-      "lib",
-      "models",
-      "user_profile.dart"
-    );
+    const expectedPath = path.join(root, "lib", "models", "user_profile.dart");
 
     // Assert file written
     assert.ok(
       fs.existsSync(expectedPath),
-      "Fallback model file was not written"
+      "Fallback model file was not written",
     );
 
     const content = fs.readFileSync(expectedPath, "utf8");
@@ -62,7 +55,7 @@ suite("Generate Model – Offline Fallback", () => {
     // Assert Dart content
     assert.ok(
       content.includes("class UserProfile"),
-      "Model class not generated correctly"
+      "Model class not generated correctly",
     );
 
     // Assert editor opened the same file
@@ -71,7 +64,7 @@ suite("Generate Model – Offline Fallback", () => {
     assert.strictEqual(
       editor.document.uri.fsPath,
       expectedPath,
-      "Opened file is not the generated model"
+      "Opened file is not the generated model",
     );
   });
 });

@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import * as fs from "fs";
 import * as path from "path";
 
-import * as serverClient from "../../api/serverClient";
+import * as serverClient from "../../api/serverClient.js";
 
 type WidgetPick = { label: string; value: boolean };
 
@@ -19,17 +19,17 @@ suite("Generate Widget – Offline Fallback", () => {
       Object.assign(new Error("ECONNREFUSED"), {
         isAxiosError: true,
         code: "ECONNREFUSED",
-      })
+      }),
     );
 
     // Stub quick pick (Stateless / Stateful)
     pickStub = sinon.stub(
       vscode.window,
-      "showQuickPick"
+      "showQuickPick",
     ) as unknown as sinon.SinonStub<
       [
         readonly WidgetPick[] | Thenable<readonly WidgetPick[]>,
-        vscode.QuickPickOptions | undefined
+        vscode.QuickPickOptions | undefined,
       ],
       Thenable<WidgetPick | undefined>
     >;
@@ -52,28 +52,21 @@ suite("Generate Widget – Offline Fallback", () => {
 
     // Mock inputs
     inputStub.onFirstCall().resolves("IconWidget"); // widget name
-    inputStub.onSecondCall().resolves(undefined);   // description
+    inputStub.onSecondCall().resolves(undefined); // description
     pickStub.resolves({ label: "StatelessWidget", value: false });
 
     // Execute command
-    await vscode.commands.executeCommand(
-      "multimodalAgent.generateWidget"
-    );
+    await vscode.commands.executeCommand("multimodalAgent.generateWidget");
 
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     assert.ok(root, "Workspace not found");
 
-    const expectedPath = path.join(
-      root,
-      "lib",
-      "widgets",
-      "icon_widget.dart"
-    );
+    const expectedPath = path.join(root, "lib", "widgets", "icon_widget.dart");
 
     // Assert file exists
     assert.ok(
       fs.existsSync(expectedPath),
-      "Fallback stateless widget file was not written"
+      "Fallback stateless widget file was not written",
     );
 
     const content = fs.readFileSync(expectedPath, "utf8");
@@ -81,7 +74,7 @@ suite("Generate Widget – Offline Fallback", () => {
     // Assert Dart content
     assert.ok(
       content.includes("class IconWidget extends StatelessWidget"),
-      "StatelessWidget not generated correctly"
+      "StatelessWidget not generated correctly",
     );
 
     // Assert editor opened correct file
@@ -90,7 +83,7 @@ suite("Generate Widget – Offline Fallback", () => {
     assert.strictEqual(
       editor.document.uri.fsPath,
       expectedPath,
-      "Opened file is not the generated widget"
+      "Opened file is not the generated widget",
     );
   });
 
@@ -101,29 +94,22 @@ suite("Generate Widget – Offline Fallback", () => {
     await ext.activate();
 
     // Mock inputs
-    inputStub.onFirstCall().resolves("UserName");   // widget name
-    inputStub.onSecondCall().resolves(undefined);  // description
+    inputStub.onFirstCall().resolves("UserName"); // widget name
+    inputStub.onSecondCall().resolves(undefined); // description
     pickStub.resolves({ label: "StatefulWidget", value: true });
 
     // Execute command
-    await vscode.commands.executeCommand(
-      "multimodalAgent.generateWidget"
-    );
+    await vscode.commands.executeCommand("multimodalAgent.generateWidget");
 
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     assert.ok(root, "Workspace not found");
 
-    const expectedPath = path.join(
-      root,
-      "lib",
-      "widgets",
-      "user_name.dart"
-    );
+    const expectedPath = path.join(root, "lib", "widgets", "user_name.dart");
 
     // Assert file exists
     assert.ok(
       fs.existsSync(expectedPath),
-      "Fallback stateful widget file was not written"
+      "Fallback stateful widget file was not written",
     );
 
     const content = fs.readFileSync(expectedPath, "utf8");
@@ -131,12 +117,12 @@ suite("Generate Widget – Offline Fallback", () => {
     // Assert Dart content
     assert.ok(
       content.includes("class UserName extends StatefulWidget"),
-      "StatefulWidget not generated correctly"
+      "StatefulWidget not generated correctly",
     );
 
     assert.ok(
       content.includes("class _UserNameState"),
-      "State class not generated"
+      "State class not generated",
     );
   });
 });

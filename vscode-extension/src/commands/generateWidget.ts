@@ -25,7 +25,7 @@ export async function generateWidget() {
       { label: "StatelessWidget", value: false },
       { label: "StatefulWidget", value: true },
     ],
-    { placeHolder: "Select widget type" }
+    { placeHolder: "Select widget type" },
   );
   if (!type) return;
 
@@ -55,7 +55,7 @@ export async function generateWidget() {
             description,
             stateful: type.value,
             project_root: projectRoot,
-          }
+          },
         );
 
         if (result.path) {
@@ -71,7 +71,7 @@ export async function generateWidget() {
       } catch (err: unknown) {
         if (isServerDown(err)) {
           vscode.window.showWarningMessage(
-            "Server is not running. Generated a local fallback widget stub."
+            "Server is not running. Generated a local fallback widget stub.",
           );
 
           const code = widgetFallback(name, type.value);
@@ -90,6 +90,6 @@ export async function generateWidget() {
 
         // other errors already shown by serverClient
       }
-    }
+    },
   );
 }

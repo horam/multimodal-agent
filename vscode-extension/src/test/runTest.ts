@@ -8,33 +8,41 @@ function ensureDir(p: string) {
 }
 
 async function main() {
-  try {
-    const extensionDevelopmentPath = path.resolve(__dirname, "../../");
-    const extensionTestsPath = path.resolve(__dirname, "./index");
+  const extensionDevelopmentPath = path.resolve(__dirname, "../../");
+  const extensionTestsPath = path.resolve(__dirname, "./index.js");
 
-    const userDataDir = path.join(os.tmpdir(), "vscode-test-user-data");
+  const userDataDir = path.join(os.tmpdir(), "vscode-test-user-data");
 
-    // Create a workspace folder for tests
-    const workspacePath = path.join(os.tmpdir(), "multimodal-agent-test-workspace");
-    ensureDir(path.join(workspacePath, "lib", "enums"));
-    ensureDir(path.join(workspacePath, "lib", "models"));
-    ensureDir(path.join(workspacePath, "lib", "repositories"));
-    ensureDir(path.join(workspacePath, "lib", "screens"));
-    ensureDir(path.join(workspacePath, "lib", "widgets"));
+  const workspacePath = path.join(
+    os.tmpdir(),
+    "multimodal-agent-test-workspace",
+  );
 
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      launchArgs: [
-        workspacePath,
-        "--disable-extensions",
-        `--user-data-dir=${userDataDir}`,
-      ],
-    });
-  } catch (err) {
-    console.error("Failed to run tests");
-    process.exit(1);
-  }
+  ensureDir(path.join(workspacePath, "lib", "enums"));
+  ensureDir(path.join(workspacePath, "lib", "models"));
+  ensureDir(path.join(workspacePath, "lib", "repositories"));
+  ensureDir(path.join(workspacePath, "lib", "screens"));
+  ensureDir(path.join(workspacePath, "lib", "widgets"));
+  ensureDir(path.join(workspacePath, "lib", "usecases"));
+
+
+  await runTests({
+    extensionDevelopmentPath,
+    extensionTestsPath,
+    launchArgs: [
+      workspacePath,
+      "--disable-extensions",
+      "--disable-workspace-trust",
+      "--skip-welcome",
+      "--skip-release-notes",
+      "--disable-telemetry",
+      "--disable-updates",
+      `--user-data-dir=${userDataDir}`,
+    ],
+  });
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

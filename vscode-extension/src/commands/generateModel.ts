@@ -45,7 +45,7 @@ export async function generateModel() {
             name,
             description,
             project_root: projectRoot,
-          }
+          },
         );
 
         // If server returns a real file path, open it. Otherwise open the content.
@@ -63,7 +63,7 @@ export async function generateModel() {
         // Server is down → client-side fallback that writes a real file
         if (isServerDown(err)) {
           vscode.window.showWarningMessage(
-            "Server is not running. Generated a local fallback model stub."
+            "Server is not running. Generated a local fallback model stub.",
           );
 
           const code = modelFallback(name);
@@ -82,6 +82,6 @@ export async function generateModel() {
 
         // other errors already shown by serverClient
       }
-    }
+    },
   );
 }
