@@ -27,17 +27,20 @@ from multimodal_agent.server.server_models import (
     AskRequest,
     ChatRequest,
     ChatResponse,
+    ExplainRequest,
     GenerateCodeResponse,
     GenerateEnumRequest,
     GenerateModelRequest,
     GenerateRepositoryRequest,
     GenerateRequest,
     GenerateScreenRequest,
+    GenerateUseCaseRequest,
     GenerateWidgetRequest,
     HistoryItem,
     HistoryResponse,
     LearnProjectRequest,
     MemorySearchRequest,
+    RefactorRequest,
     SummaryResponse,
 )
 from multimodal_agent.utils import load_image_as_part
@@ -378,7 +381,7 @@ def history_summary(
 
 # Project learning / profiles
 @app.post("/learn/project", tags=["project"])
-def learn_project(req: LearnProjectRequest):
+def learn_project(request: LearnProjectRequest):
     """
     Learn a project's style profile and optionally store it in RAG.
 
@@ -388,12 +391,12 @@ def learn_project(req: LearnProjectRequest):
     - store its style in RAG
     - then call `/generate` or `/ask` with that style as hidden context
     """
-    root = Path(req.path).resolve()
+    root = Path(request.path).resolve()
     if not root.exists() or not root.is_dir():
         raise HTTPException(400, f"Invalid project path: {root}")
 
     # 1. Run scanner
-    if req.auto_scan:
+    if request.auto_scan:
         profile = scan_project(root)
     else:
         raise HTTPException(400, "auto_scan=False is not supported yet.")
@@ -402,10 +405,11 @@ def learn_project(req: LearnProjectRequest):
 
     # 2. Optionally store in RAG
     project_id = (
-        req.project_id or f"project:{profile.package_name or profile.root.name}"  # noqa
+        request.project_id
+        or f"project:{profile.package_name or profile.root.name}"  # noqa
     )
 
-    if req.store_profile:
+    if request.store_profile:
         agent.rag_store.add_logical_message(
             content=json.dumps(profile_dict),
             role="project_profile",
@@ -463,6 +467,30 @@ def load_project_api(project_id: str):
     }
 
 
+@app.post("/explain", tags=["code"])
+def explain_code(request: ExplainRequest):
+    if not request.code.strip():
+        raise HTTPException(400, "Code is empty")
+
+    try:
+        text = engine.explain_code(request.code)
+        return {"text": text}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/refactor", tags=["code"])
+def refactor_code(request: RefactorRequest):
+    if not request.code.strip():
+        raise HTTPException(400, "Code is empty")
+
+    try:
+        text = engine.refactor_code(request.code)
+        return {"text": text}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/generate/widget", tags=["generate"])
 def generate_widget(request: GenerateWidgetRequest):
     return generate_api_helper(
@@ -501,6 +529,11 @@ def generate_repository(request: GenerateRepositoryRequest):
         request,
         kind="repository",
     )
+
+
+@app.post("/generate/usecase", tags=["generate"])
+def generate_usecase(request: GenerateUseCaseRequest):
+    return generate_api_helper(request, kind="usecase")
 
 
 def generate_api_helper(

@@ -186,3 +186,115 @@ def test_cli_gen_enum_offline(tmp_path, monkeypatch):
 
     finally:
         os.chdir(cwd)
+
+
+def test_cli_gen_usecase_offline(tmp_path, monkeypatch):
+    (tmp_path / "pubspec.yaml").write_text("name: test")
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    os.chdir(tmp_path)
+    result = test_main(["gen", "usecase", "FetchUser", "--entity", "User"])
+
+    assert result == 0
+
+    code = (tmp_path / "lib/usecases/fetch_user.dart").read_text()
+    assert "class FetchUser" in code
+    assert "Future<T>" in code
+
+
+def test_cli_gen_usecase_online(tmp_path, monkeypatch):
+    (tmp_path / "pubspec.yaml").write_text("name: test")
+
+    monkeypatch.setenv("GOOGLE_API_KEY", "API_KEY")
+
+    monkeypatch.setattr(
+        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        lambda self, _: (
+            "class FetchUser {\n"
+            "  Future<User> call() async {\n"
+            "    return User();\n"
+            "  }\n"
+            "}\n"
+        ),
+    )
+
+    os.chdir(tmp_path)
+    result = test_main(["gen", "usecase", "FetchUser", "--entity", "User"])
+
+    assert result == 0
+
+    code = (tmp_path / "lib/usecases/fetch_user.dart").read_text()
+    assert "class FetchUser" in code
+
+
+def test_cli_explain_offline(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    f = tmp_path / "a.dart"
+    f.write_text("class A {}")
+
+    result = test_main(["explain", str(f)])
+    assert result == 0
+
+    out = capsys.readouterr().out
+    assert "OFFLINE_EXPLANATION" in out
+
+
+def test_cli_explain_online(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("GOOGLE_API_KEY", "API_KEY")
+
+    monkeypatch.setattr(
+        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        lambda self, _: "This class defines A.",
+    )
+
+    f = tmp_path / "a.dart"
+    f.write_text("class A {}")
+
+    result = test_main(["explain", str(f)])
+    assert result == 0
+
+    out = capsys.readouterr().out
+    assert "This class defines A." in out
+
+
+def test_cli_refactor_offline(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    f = tmp_path / "b.dart"
+    f.write_text("class B {}")
+
+    result = test_main(["refactor", str(f)])
+    assert result == 0
+
+    out = capsys.readouterr().out
+    assert "class B" in out
+
+
+def test_cli_refactor_online(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        lambda self, _: "class B { const B(); }",
+    )
+
+    f = tmp_path / "b.dart"
+    f.write_text("class B { const B(); }")
+
+    result = test_main(["refactor", str(f)])
+    assert result == 0
+
+    out = capsys.readouterr().out
+    assert "const B()" in out
+
+
+def test_cli_refactor_write_offline(tmp_path, monkeypatch):
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    file = tmp_path / "c.dart"
+    file.write_text("class C {}")
+
+    result = test_main(["refactor", str(file), "--write"])
+    assert result == 0
+
+    code = file.read_text()
+    assert "class C" in code

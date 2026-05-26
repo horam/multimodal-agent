@@ -7,10 +7,12 @@ from multimodal_agent.codegen.enum_template import (
     build_enum_fallback,
     build_enum_prompt,
 )
+from multimodal_agent.codegen.explain_template import build_explain_prompt
 from multimodal_agent.codegen.model_template import (
     build_model_fallback,
     build_model_prompt,
 )
+from multimodal_agent.codegen.refactor_template import build_refactor_prompt
 from multimodal_agent.codegen.repository_template import (
     build_repository_fallback,
     build_repository_prompt,
@@ -18,6 +20,10 @@ from multimodal_agent.codegen.repository_template import (
 from multimodal_agent.codegen.screen_template import (
     build_screen_fallback,
     build_screen_prompt,
+)
+from multimodal_agent.codegen.usecase_template import (
+    build_usecase_fallback,
+    build_usecase_prompt,
 )
 from multimodal_agent.codegen.utils import sanitize_class_name
 from multimodal_agent.codegen.widget_template import (
@@ -125,6 +131,9 @@ class CodegenEngine:
         if not code or not code.strip():
             raise ValueError("Generated code is empty.")
 
+        if kind == "raw":
+            return self.extract_code(code)
+
         text = code.strip()
 
         # Remove markdown fences if they escaped extract_code()
@@ -205,6 +214,9 @@ class CodegenEngine:
         Determine output path, call generation, write file.
         """
 
+        if kind in {"refactor", "explain"}:
+            return self._handle_transform(kind, **locals())
+
         root_path = self.detect_project_root(root)
         class_name = sanitize_class_name(name)
         snake_case = re.sub(r"(?<!^)([A-Z])", r"_\1", class_name).lower()
@@ -274,6 +286,22 @@ class CodegenEngine:
                 )
             else:
                 content = self.generate_repository(
+                    name,
+                    description=description,
+                    entity=entity,
+                )
+
+        elif kind == "usecase":
+            out_path = root_path / "lib" / "usecases" / f"{snake_case}.dart"  # noqa
+
+            if self.is_offline_mode():
+                content = self.generate_fallback_code(
+                    kind=kind,
+                    class_name=class_name,
+                    entity=entity,
+                )
+            else:
+                content = self.generate_usecase(
                     name,
                     description=description,
                     entity=entity,
@@ -349,6 +377,9 @@ class CodegenEngine:
         if kind == "repository":
             return build_repository_fallback(class_name, entity=entity)
 
+        if kind == "usecase":
+            return build_usecase_fallback(class_name)
+
         raise ValueError(f"Unknown generation type: {kind}")
 
     def generate_widget(
@@ -414,4 +445,55 @@ class CodegenEngine:
                 description=description,
             )
         )
+        return content
+
+    def generate_usecase(
+        self, name: str, description: str = "", entity: Optional[str] = None
+    ) -> str:
+        class_name = sanitize_class_name(name)
+        content = self.run(
+            build_usecase_prompt(
+                class_name,
+                entity=entity,
+                description=description,
+            )
+        )
+        return content
+
+    def _handle_transform(
+        self,
+        kind: str,
+        name: str,
+        root: str | Path,
+        description: str = "",
+        **kwargs,
+    ):
+        code = kwargs.get("code")
+        if not code:
+            raise ValueError("No code provided for transformation")
+
+        if self.is_offline_mode():
+            if kind == "refactor":
+                return code  # no-op, deterministic
+            if kind == "explain":
+                return f"OFFLINE_EXPLANATION:\n{code[:300]}"
+
+        if kind == "refactor":
+            return self.refactor_code(code)
+
+        if kind == "explain":
+            return self.explain_code(code)
+
+        raise ValueError(f"Unknown transform kind: {kind}")
+
+    def explain_code(self, code: str, focus: str | None = None) -> str:
+        if self.is_offline_mode():
+            return f"OFFLINE_EXPLANATION::\n{code[:300]}"
+        content = self.run(build_explain_prompt(code, focus))
+        return content
+
+    def refactor_code(self, code: str, goal: str | None = None) -> str:
+        if self.is_offline_mode():
+            return code
+        content = self.run(build_refactor_prompt(code, goal))
         return content

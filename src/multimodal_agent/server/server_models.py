@@ -123,6 +123,22 @@ class GenerateRepositoryRequest(BaseGenerateRequest):
     )
 
 
+class GenerateUseCaseRequest(BaseGenerateRequest):
+    entity: Optional[str] = Field(
+        default=None,
+        description="Entity name the usecase manages",
+        example="User",
+    )
+
+
+class ExplainRequest(BaseModel):
+    code: str
+
+
+class RefactorRequest(BaseModel):
+    code: str
+
+
 class GenerateCodeResponse(BaseModel):
     code: str
     path: Optional[str] = None

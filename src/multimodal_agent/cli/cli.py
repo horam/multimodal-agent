@@ -96,6 +96,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Session ID for this query",
     )
 
+    # explain code
+    explain_parser = subparsers.add_parser(
+        "explain",
+        help="Explain a source code file",
+    )
+    explain_parser.add_argument(
+        "path",
+        type=str,
+        help="Path to source code file",
+    )
+
+    # refactor code
+    refactor_parser = subparsers.add_parser(
+        "refactor",
+        help="Refactor a source code file",
+    )
+    refactor_parser.add_argument(
+        "path",
+        type=str,
+        help="Path to source code file",
+    )
+    refactor_parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Overwrite the file with refactored code",
+    )
+
     # agent gen <type> <name>
     gen_parser = subparsers.add_parser(
         "gen",
@@ -196,6 +223,29 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default="",
         help="Optional description of the repository",
+    )
+    # gen use case <name>
+    gen_use_case = gen_sub.add_parser(
+        "usecase",
+        help="Generate a UseCase abstraction",
+    )
+    gen_use_case.add_argument("name")
+    gen_use_case.add_argument(
+        "--entity",
+        type=str,
+        default=None,
+        help="Entity name the use case manages",
+    )
+    gen_use_case.add_argument(
+        "--override",
+        action="store_true",
+        help="Overwrite if exists",
+    )
+    gen_use_case.add_argument(
+        "--desc",
+        type=str,
+        default="",
+        help="Optional description of the usecase",
     )
 
     # format
@@ -503,6 +553,13 @@ def _main(args, parser):
         # create agent instance
         agent = MultiModalAgent(model=args.model, enable_rag=enable_rag)
 
+    needs_engine = args.command in {"refactor", "explain", "gen"}
+
+    engine = None
+
+    if needs_engine:
+        engine = CodegenEngine(model=args.model)
+
     try:
         # asking question in text.
         if args.command == "ask":
@@ -563,6 +620,34 @@ def _main(args, parser):
             )
             return 0
 
+        elif args.command == "explain":
+            path = args.path
+            if not os.path.exists(path):
+                print(f"File not found: {path}")
+                return 1
+            with open(path, "r", encoding="utf-8") as file:
+                code = file.read()
+            result = engine.explain_code(code)
+            print(result)
+            return 0
+
+        elif args.command == "refactor":
+            path = args.path
+            if not os.path.exists(path):
+                print(f"File not found: {path}")
+                return 1
+
+            code = open(path, "r", encoding="utf-8").read()
+            result = engine.refactor_code(code)
+
+            if args.write:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(result)
+                print(f"Refactored and written to {path}")
+            else:
+                print(result)
+            return 0
+
         # learn project.
         elif args.command == "learn-project":
             profile = scan_project(args.path)
@@ -612,8 +697,6 @@ def _main(args, parser):
 
         # agent gen ...
         if args.command == "gen":
-            engine = CodegenEngine(model=getattr(args, "model", None))
-
             # Widget
             if args.gen_cmd == "widget":
                 out = engine.generate_and_write(
@@ -673,7 +756,17 @@ def _main(args, parser):
                 )
                 print(f"Repository generated at {out}")
                 return 0
-
+            if args.gen_cmd == "usecase":
+                out = engine.generate_and_write(
+                    kind="usecase",
+                    name=args.name,
+                    root=os.getcwd(),
+                    override=args.override,
+                    description=getattr(args, "desc", ""),
+                    entity=getattr(args, "entity", None),
+                )
+                print(f"UseCase generated at {out}")
+                return 0
         elif args.command == "config":
 
             if args.config_cmd == "set-key":
