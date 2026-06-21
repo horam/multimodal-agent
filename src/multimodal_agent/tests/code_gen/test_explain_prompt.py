@@ -19,7 +19,7 @@ def test_build_explain_prompt_contains_code_and_task():
 
 def test_explain_code_success():
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.explain_code",
+        "multimodal_agent.codegen.engine.CodeGenEngine.explain_code",
         return_value="This explains the code.",
     ):
         resp = client.post(

@@ -1,8 +1,8 @@
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 
 
 def test_safe_write_creates_file(tmp_path):
-    eng = CodegenEngine()
+    eng = CodeGenEngine()
     fp = tmp_path / "file.dart"
 
     eng.safe_write(fp, "hello")
@@ -11,7 +11,7 @@ def test_safe_write_creates_file(tmp_path):
 
 
 def test_safe_write_prevents_overwrite(tmp_path):
-    eng = CodegenEngine()
+    eng = CodeGenEngine()
     fp = tmp_path / "file.dart"
     fp.write_text("old")
 
@@ -23,7 +23,7 @@ def test_safe_write_prevents_overwrite(tmp_path):
 
 
 def test_safe_write_override(tmp_path):
-    eng = CodegenEngine()
+    eng = CodeGenEngine()
     fp = tmp_path / "file.dart"
     fp.write_text("old")
 

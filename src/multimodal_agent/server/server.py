@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from multimodal_agent import MultiModalAgent, config
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.project_scanner import scan_project
 from multimodal_agent.rag.rag_store import SQLiteRAGStore
 from multimodal_agent.server.server_models import (
@@ -58,7 +58,7 @@ agent = MultiModalAgent(rag_store=rag, enable_rag=True)
 
 engine_config = config.get_config()
 model = engine_config.get("chat_model")
-engine = CodegenEngine(model=model)
+engine = CodeGenEngine(model=model)
 
 # FastAPI app
 app = FastAPI(
@@ -570,4 +570,12 @@ def generate_api_helper(
     except HTTPException:
         raise
     except Exception as exception:
+        # todo(Horam): temporary change.
+        message = str(exception)
+
+        if "RESOURCE_EXHAUSTED" in message:
+            raise HTTPException(
+                429,
+                "Gemini API quota exceeded. Please check billing.",
+            )
         raise HTTPException(400, str(exception))

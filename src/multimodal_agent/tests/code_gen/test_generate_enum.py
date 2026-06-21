@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.codegen.enum_template import (
     build_enum_fallback,
     build_enum_prompt,
@@ -17,7 +17,7 @@ def test_generate_enum_success(tmp_path):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.generate_enum",
+        "multimodal_agent.codegen.engine.CodeGenEngine.generate_enum",
         return_value="enum OrderStatus { pending, shipped }",
     ):
         response = client.post(
@@ -50,7 +50,7 @@ def test_generate_enum_invalid_name(tmp_path):
 
 
 def test_build_enum_prompt_with_value():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(
         engine,
         "generate_enum",

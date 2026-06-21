@@ -10,7 +10,7 @@ client = TestClient(app)
 
 def test_refactor_code_success():
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.refactor_code",
+        "multimodal_agent.codegen.engine.CodeGenEngine.refactor_code",
         return_value="class A { const A(); }",
     ):
         response = client.post(

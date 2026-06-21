@@ -1,11 +1,11 @@
 import pytest
 
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 
 
 @pytest.fixture
 def eng(monkeypatch):
-    eng = CodegenEngine()
+    eng = CodeGenEngine()
 
     def fake_run(prompt):
         # Always return valid widget code

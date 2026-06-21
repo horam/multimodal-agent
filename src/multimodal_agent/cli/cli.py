@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from multimodal_agent.cli.history import handle_history
 from multimodal_agent.cli.printing import print_markdown_with_meta
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.config import get_config, set_config_field
 from multimodal_agent.errors import AgentError
 from multimodal_agent.logger import get_logger
@@ -558,7 +558,7 @@ def _main(args, parser):
     engine = None
 
     if needs_engine:
-        engine = CodegenEngine(model=args.model)
+        engine = CodeGenEngine(model=args.model)
 
     try:
         # asking question in text.

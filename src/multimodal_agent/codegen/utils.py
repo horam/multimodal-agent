@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 
-class CodegenError(Exception):
+class CodeGenerationError(Exception):
     pass
 
 
@@ -24,7 +24,7 @@ def find_flutter_root(start: str | Path) -> Path:
             break
         current = current.parent
 
-    raise CodegenError(
+    raise CodeGenerationError(
         "Could not locate Flutter project root. "
         "Make sure you run this inside a Flutter project (with pubspec.yaml and lib/)."  # noqa
     )
@@ -73,7 +73,7 @@ def safe_write_file(
     path = Path(path)
 
     if path.exists() and not override:
-        raise CodegenError(
+        raise CodeGenerationError(
             f"File already exists: {path}. Use --override to overwrite."
         )  # noqa
 

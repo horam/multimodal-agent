@@ -33,7 +33,7 @@ from multimodal_agent.codegen.widget_template import (
 from multimodal_agent.config import get_config
 
 
-class CodegenEngine:
+class CodeGenEngine:
     """
     v0.9.0 Core engine for generating Flutter code using the agent.
 

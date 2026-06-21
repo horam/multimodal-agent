@@ -5,17 +5,17 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.codegen.utils import sanitize_class_name, to_snake_case
 
 
 @pytest.fixture
 def fake_engine(monkeypatch):
     """
-    Creates a CodegenEngine with run() patched so we do not call actual LLM.
+    Creates a CodeGenEngine with run() patched so we do not call actual LLM.
     run() will return a valid Dart class containing the expected class name.
     """
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
 
     def fake_run(self, prompt):
 
@@ -26,13 +26,13 @@ def fake_engine(monkeypatch):
             class_name = "GeneratedWidget"
         return f"class {class_name} {{}}"
 
-    monkeypatch.setattr(CodegenEngine, "run", fake_run, raising=True)
+    monkeypatch.setattr(CodeGenEngine, "run", fake_run, raising=True)
 
     return engine
 
 
 # Generate and write widget.
-def test_generate_and_write_widget(tmp_path: Path, fake_engine: CodegenEngine):
+def test_generate_and_write_widget(tmp_path: Path, fake_engine: CodeGenEngine):
     # create fake Flutter project
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
@@ -54,7 +54,7 @@ def test_generate_and_write_widget(tmp_path: Path, fake_engine: CodegenEngine):
     assert f"class {class_name}" in code
 
 
-def test_generate_and_write_screen(tmp_path: Path, fake_engine: CodegenEngine):
+def test_generate_and_write_screen(tmp_path: Path, fake_engine: CodeGenEngine):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
     out = fake_engine.generate_and_write(
@@ -75,7 +75,7 @@ def test_generate_and_write_screen(tmp_path: Path, fake_engine: CodegenEngine):
     assert f"class {class_name}" in code
 
 
-def test_generate_and_write_model(tmp_path: Path, fake_engine: CodegenEngine):
+def test_generate_and_write_model(tmp_path: Path, fake_engine: CodeGenEngine):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
     out = fake_engine.generate_and_write(
@@ -98,16 +98,16 @@ def test_generate_and_write_model(tmp_path: Path, fake_engine: CodegenEngine):
 
 # Imports
 def test_insert_material_import_when_missing():
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     code = "class A {}"
-    out = eng.ensure_material_import(code)
+    out = engine.ensure_material_import(code)
     assert "import 'package:flutter/material.dart';" in out
 
 
 def test_does_not_duplicate_import():
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     code = "import 'package:flutter/material.dart';\nclass A {}"
-    out = eng.ensure_material_import(code)
+    out = engine.ensure_material_import(code)
     assert out.count("material.dart") == 1
 
 
@@ -117,8 +117,8 @@ def test_detect_project_root(tmp_path):
     proj.mkdir()
     (proj / "pubspec.yaml").write_text("name: test")
 
-    eng = CodegenEngine()
-    root = eng.detect_project_root(proj)
+    engine = CodeGenEngine()
+    root = engine.detect_project_root(proj)
 
     assert root == proj
 
@@ -130,16 +130,16 @@ def test_detect_project_root_from_child(tmp_path):
 
     (proj / "pubspec.yaml").write_text("name: test")
 
-    eng = CodegenEngine()
-    root = eng.detect_project_root(nested)
+    engine = CodeGenEngine()
+    root = engine.detect_project_root(nested)
 
     assert root == proj
 
 
 def test_detect_project_root_missing(tmp_path):
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     try:
-        eng.detect_project_root(tmp_path)
+        engine.detect_project_root(tmp_path)
         assert False, "Expected FileNotFoundError"
     except FileNotFoundError:
         assert True
@@ -147,28 +147,28 @@ def test_detect_project_root_missing(tmp_path):
 
 # Extract code.
 def test_extract_code_no_fence():
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     raw = "class A {}"
-    assert eng.extract_code(raw) == "class A {}"
+    assert engine.extract_code(raw) == "class A {}"
 
 
 def test_extract_code_with_dart_fence():
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     raw = "```dart\nclass A {}\n```"
-    assert eng.extract_code(raw) == "class A {}"
+    assert engine.extract_code(raw) == "class A {}"
 
 
 def test_extract_code_with_plain_fence():
-    eng = CodegenEngine()
+    engine = CodeGenEngine()
     raw = "``` \nclass A {}\n```"
-    assert eng.extract_code(raw) == "class A {}"
+    assert engine.extract_code(raw) == "class A {}"
 
 
 @patch("multimodal_agent.codegen.engine.get_config")
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_widget_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="widget",
@@ -182,7 +182,7 @@ def test_offline_widget_fallback(mock_config):
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_screen_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="screen",
@@ -196,7 +196,7 @@ def test_offline_screen_fallback(mock_config):
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_model_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="model",
@@ -210,7 +210,7 @@ def test_offline_model_fallback(mock_config):
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_enum_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="enum",
@@ -224,7 +224,7 @@ def test_offline_enum_fallback(mock_config):
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_repository_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="repository",
@@ -238,7 +238,7 @@ def test_offline_repository_fallback(mock_config):
 @patch.dict("os.environ", {}, clear=True)
 def test_offline_usecase_fallback(mock_config):
     mock_config.return_value = {"api_key": None, "chat_model": "x"}
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with patch.object(engine, "is_offline_mode", return_value=True):
         result = engine.generate_and_write(
             kind="usecase",
@@ -249,32 +249,32 @@ def test_offline_usecase_fallback(mock_config):
 
 
 def test_extract_code_no_fences():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     result = engine.extract_code("class A {}")
     assert result == "class A {}"
 
 
 def test_extract_code_malformed_fences():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     result = engine.extract_code("```dart\nclass A {}")
     assert "class A" in result
 
 
 def test_validate_and_clean_empty():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with pytest.raises(ValueError):
         engine.validate_and_clean("", "User", "widget")
 
 
 def test_validate_and_clean_missing_class():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     code = "class Other {}"
     with pytest.raises(ValueError):
         engine.validate_and_clean(code, "User", "widget")
 
 
 def test_validate_and_clean_dedup_imports():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     code = """
 import a;
 import a;
@@ -285,7 +285,7 @@ class User {}
 
 
 def test_refactor_branch():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with (
         patch.object(engine, "is_offline_mode", return_value=False),
         patch.object(engine, "refactor_code", return_value="refactored"),
@@ -302,7 +302,7 @@ def test_refactor_branch():
 
 
 def test_explain_branch():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with (
         patch.object(engine, "is_offline_mode", return_value=False),
         patch.object(engine, "explain_code", return_value="explained"),
@@ -319,7 +319,7 @@ def test_explain_branch():
 
 
 def test_transform_missing_code():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with pytest.raises(ValueError):
         engine._handle_transform(
             kind="refactor",
@@ -329,7 +329,7 @@ def test_transform_missing_code():
 
 
 def test_run_missing_text():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
 
     class Resp:
         pass
@@ -346,9 +346,8 @@ def test_run_missing_text():
             engine.run("prompt")
 
 
-
 def test_material_import_insert_position():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     code = """import 'a.dart';
 import 'b.dart';
 class A {}"""
@@ -369,7 +368,7 @@ def test_is_offline_mode_true():
             },
         ),
     ):
-        engine = CodegenEngine()
+        engine = CodeGenEngine()
         assert engine.is_offline_mode() is True
 
 
@@ -384,12 +383,12 @@ def test_is_offline_mode_false_env():
             },
         ),
     ):
-        engine = CodegenEngine()
+        engine = CodeGenEngine()
         assert engine.is_offline_mode() is False
 
 
 def test_generate_and_write_unknown_kind():
-    engine = CodegenEngine()
+    engine = CodeGenEngine()
     with pytest.raises(ValueError):
         engine.generate_and_write(
             kind="unknown",

@@ -15,7 +15,7 @@ def test_generate_repository_success(tmp_path):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.generate_repository",
+        "multimodal_agent.codegen.engine.CodeGenEngine.generate_repository",
         return_value="abstract class UserRepository {}",
     ):
         response = client.post(
@@ -36,7 +36,7 @@ def test_generate_repository_success(tmp_path):
 def test_generate_repository_invalid_name(tmp_path):
     (tmp_path / "pubspec.yaml").write_text("name: test")
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.generate_repository",
+        "multimodal_agent.codegen.engine.CodeGenEngine.generate_repository",
         return_value="abstract class UserRepository {}",
     ):
         resp = client.post(

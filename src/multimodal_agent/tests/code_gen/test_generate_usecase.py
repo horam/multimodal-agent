@@ -18,7 +18,7 @@ def test_generate_usecase_success(tmp_path):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
     with patch(
-        "multimodal_agent.codegen.engine.CodegenEngine.generate_usecase",
+        "multimodal_agent.codegen.engine.CodeGenEngine.generate_usecase",
         return_value="class FetchUser { Future<User> call() async {} }",
     ):
         response = client.post(

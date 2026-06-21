@@ -17,7 +17,7 @@ def test_cli_gen_widget(tmp_path, monkeypatch):
 
     # Mock LLM output so we don’t call actual models
     monkeypatch.setattr(
-        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        "multimodal_agent.codegen.engine.CodeGenEngine.run",
         lambda self, prompt: (
             "import 'package:flutter/material.dart';\n\n"
             "class MyWidget extends StatelessWidget {\n"
@@ -208,7 +208,7 @@ def test_cli_gen_usecase_online(tmp_path, monkeypatch):
     monkeypatch.setenv("GOOGLE_API_KEY", "API_KEY")
 
     monkeypatch.setattr(
-        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        "multimodal_agent.codegen.engine.CodeGenEngine.run",
         lambda self, _: (
             "class FetchUser {\n"
             "  Future<User> call() async {\n"
@@ -244,7 +244,7 @@ def test_cli_explain_online(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("GOOGLE_API_KEY", "API_KEY")
 
     monkeypatch.setattr(
-        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        "multimodal_agent.codegen.engine.CodeGenEngine.run",
         lambda self, _: "This class defines A.",
     )
 
@@ -273,7 +273,7 @@ def test_cli_refactor_offline(tmp_path, monkeypatch, capsys):
 
 def test_cli_refactor_online(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(
-        "multimodal_agent.codegen.engine.CodegenEngine.run",
+        "multimodal_agent.codegen.engine.CodeGenEngine.run",
         lambda self, _: "class B { const B(); }",
     )
 

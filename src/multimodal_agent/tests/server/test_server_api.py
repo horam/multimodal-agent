@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from multimodal_agent.codegen.engine import CodegenEngine
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.server.server import agent, app
 
 client = TestClient(app)
@@ -498,7 +498,7 @@ class MyWidget extends StatelessWidget {
 """
 
     monkeypatch.setattr(
-        CodegenEngine,
+        CodeGenEngine,
         "generate_widget",
         fake_generate_widget,
     )

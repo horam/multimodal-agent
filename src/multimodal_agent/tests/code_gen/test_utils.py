@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from multimodal_agent.codegen.utils import (
-    CodegenError,
+    CodeGenerationError,
     find_flutter_root,
     format_dart_file,
     model_file_path,
@@ -76,7 +76,7 @@ def test_find_flutter_root_success(tmp_path):
 
 
 def test_find_flutter_root_failure(tmp_path):
-    with pytest.raises(CodegenError):
+    with pytest.raises(CodeGenerationError):
         find_flutter_root(tmp_path)
 
 
@@ -115,7 +115,7 @@ def test_safe_write_file_prevents_override(tmp_path):
     file_path = tmp_path / "test.dart"
     file_path.write_text("old")
 
-    with pytest.raises(CodegenError):
+    with pytest.raises(CodeGenerationError):
         safe_write_file(
             file_path,
             "new",
