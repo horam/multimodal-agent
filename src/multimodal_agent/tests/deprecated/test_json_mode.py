@@ -1,7 +1,7 @@
 import pytest
 
-from multimodal_agent import MultiModalAgent
 from multimodal_agent.core.agent_core import AgentResponse
+from multimodal_agent.core.interface import get_agent
 from multimodal_agent.errors import NonRetryableError
 from multimodal_agent.utils import load_image_as_part
 
@@ -53,7 +53,7 @@ def test_json_response_basic(monkeypatch):
     """
     Basic JSON dict returned correctly.
     """
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = FakeJSONClient()
 
     result = agent.ask("hi", response_format="json")
@@ -69,7 +69,7 @@ def test_json_response_markdown_fences_removed(monkeypatch):
     """
     Handles ```json fenced code blocks correctly.
     """
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = FakeMarkdownClient()
 
     result = agent.ask("test fenced", response_format="json")
@@ -85,7 +85,7 @@ def test_json_response_invalid_fallback(monkeypatch):
     """
     Invalid JSON, data=None, text preserved.
     """
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = FakeInvalidJSONClient()
 
     result = agent.ask("bad json", response_format="json")
@@ -99,7 +99,7 @@ def test_json_response_offline_fake_mode(monkeypatch):
     """
     Offline fake JSON mode.
     """
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
 
     monkeypatch.setenv("GOOGLE_API_KEY", "")
     result = agent.ask("hello", response_format="json")
@@ -130,7 +130,7 @@ def test_json_response_through_ask_with_image(monkeypatch, tmp_path):
 
     monkeypatch.setattr("PIL.Image.open", lambda *_: DummyImage())
 
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = FakeJSONClient()
 
     part = load_image_as_part(str(image_path))
@@ -151,7 +151,7 @@ def test_json_response_real_error_bubbles(monkeypatch):
             def generate_content(*args, **kwargs):
                 raise Exception("real error")
 
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = FailingClient()
 
     monkeypatch.setenv("GOOGLE_API_KEY", "dummy_key")

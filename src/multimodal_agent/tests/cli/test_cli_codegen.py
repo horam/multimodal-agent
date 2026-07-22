@@ -1,6 +1,6 @@
 import os
 
-from multimodal_agent.cli.cli import test_main
+from multimodal_agent.cli.cli import run_cli
 
 
 def test_cli_gen_widget(tmp_path, monkeypatch):
@@ -36,7 +36,7 @@ def test_cli_gen_widget(tmp_path, monkeypatch):
 
     try:
         # Execute CLI
-        result = test_main(["gen", "widget", "MyWidget", "--override"])
+        result = run_cli(["gen", "widget", "MyWidget", "--override"])
 
         # Confirm CLI exited successfully
         assert result == 0 or result is None
@@ -76,7 +76,7 @@ def test_cli_gen_widget_offline_fallback(tmp_path, monkeypatch):
     os.chdir(tmp_path)
 
     try:
-        result = test_main(["gen", "widget", "OfflineWidget"])
+        result = run_cli(["gen", "widget", "OfflineWidget"])
         assert result == 0
 
         out_file = tmp_path / "lib/widgets/offline_widget.dart"
@@ -98,7 +98,7 @@ def test_cli_gen_widget_stateful_offline(tmp_path, monkeypatch):
     os.chdir(tmp_path)
 
     try:
-        result = test_main(["gen", "widget", "Counter", "--stateful"])
+        result = run_cli(["gen", "widget", "Counter", "--stateful"])
         assert result == 0
 
         code = (tmp_path / "lib/widgets/counter.dart").read_text()
@@ -117,7 +117,7 @@ def test_cli_gen_model_offline(tmp_path, monkeypatch):
     os.chdir(tmp_path)
 
     try:
-        result = test_main(["gen", "model", "User"])
+        result = run_cli(["gen", "model", "User"])
         assert result == 0
 
         code = (tmp_path / "lib/models/user.dart").read_text()
@@ -137,7 +137,7 @@ def test_cli_gen_repository_offline(tmp_path, monkeypatch):
     os.chdir(tmp_path)
 
     try:
-        result = test_main(
+        result = run_cli(
             ["gen", "repository", "UserRepository", "--entity", "User"],
         )
 
@@ -170,7 +170,7 @@ def test_cli_gen_enum_offline(tmp_path, monkeypatch):
     os.chdir(tmp_path)
 
     try:
-        result = test_main(["gen", "enum", "OrderStatus"])
+        result = run_cli(["gen", "enum", "OrderStatus"])
         assert result == 0
 
         out_file = tmp_path / "lib" / "enums" / "order_status.dart"
@@ -193,7 +193,7 @@ def test_cli_gen_usecase_offline(tmp_path, monkeypatch):
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
 
     os.chdir(tmp_path)
-    result = test_main(["gen", "usecase", "FetchUser", "--entity", "User"])
+    result = run_cli(["gen", "usecase", "FetchUser", "--entity", "User"])
 
     assert result == 0
 
@@ -219,7 +219,7 @@ def test_cli_gen_usecase_online(tmp_path, monkeypatch):
     )
 
     os.chdir(tmp_path)
-    result = test_main(["gen", "usecase", "FetchUser", "--entity", "User"])
+    result = run_cli(["gen", "usecase", "FetchUser", "--entity", "User"])
 
     assert result == 0
 
@@ -233,7 +233,7 @@ def test_cli_explain_offline(tmp_path, monkeypatch, capsys):
     f = tmp_path / "a.dart"
     f.write_text("class A {}")
 
-    result = test_main(["explain", str(f)])
+    result = run_cli(["explain", str(f)])
     assert result == 0
 
     out = capsys.readouterr().out
@@ -251,7 +251,7 @@ def test_cli_explain_online(tmp_path, monkeypatch, capsys):
     f = tmp_path / "a.dart"
     f.write_text("class A {}")
 
-    result = test_main(["explain", str(f)])
+    result = run_cli(["explain", str(f)])
     assert result == 0
 
     out = capsys.readouterr().out
@@ -264,7 +264,7 @@ def test_cli_refactor_offline(tmp_path, monkeypatch, capsys):
     f = tmp_path / "b.dart"
     f.write_text("class B {}")
 
-    result = test_main(["refactor", str(f)])
+    result = run_cli(["refactor", str(f)])
     assert result == 0
 
     out = capsys.readouterr().out
@@ -280,7 +280,7 @@ def test_cli_refactor_online(tmp_path, monkeypatch, capsys):
     f = tmp_path / "b.dart"
     f.write_text("class B { const B(); }")
 
-    result = test_main(["refactor", str(f)])
+    result = run_cli(["refactor", str(f)])
     assert result == 0
 
     out = capsys.readouterr().out
@@ -293,7 +293,7 @@ def test_cli_refactor_write_offline(tmp_path, monkeypatch):
     file = tmp_path / "c.dart"
     file.write_text("class C {}")
 
-    result = test_main(["refactor", str(file), "--write"])
+    result = run_cli(["refactor", str(file), "--write"])
     assert result == 0
 
     code = file.read_text()

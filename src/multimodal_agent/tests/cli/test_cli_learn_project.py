@@ -1,4 +1,4 @@
-from multimodal_agent.cli import test_main as cli
+from multimodal_agent.cli import run_cli as cli
 
 
 def test_cli_learn_project(tmp_path):

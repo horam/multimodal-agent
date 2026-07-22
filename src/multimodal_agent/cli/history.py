@@ -1,4 +1,5 @@
 from multimodal_agent.cli.printing import print_markdown_with_meta
+from multimodal_agent.core.interface import get_agent
 from multimodal_agent.rag import SQLiteRAGStore
 
 
@@ -153,11 +154,8 @@ def _summary_history(args, store: SQLiteRAGStore) -> int:
         + transcript
     )
 
-    # To avoid circular dependency
-    from multimodal_agent.core.agent_core import MultiModalAgent
-
-    agent = MultiModalAgent(enable_rag=False)
-    response, usage = agent.safe_generate_content(summarization_prompt)
+    agent = get_agent(enable_rag=False)
+    response, _ = agent.safe_generate_content(summarization_prompt)
 
     text = getattr(response, "text", str(response))
 

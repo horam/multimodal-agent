@@ -1,8 +1,8 @@
-from multimodal_agent.core.agent_core import MultiModalAgent
+from multimodal_agent.core.interface import get_agent
 
 
 def test_chat_error_path(monkeypatch, caplog):
-    agent = MultiModalAgent(client=None)
+    agent = get_agent(client=None)
 
     # Dummy client throwing raw exception from generate_content
     class DummyClient:

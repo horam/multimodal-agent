@@ -10,6 +10,7 @@ from multimodal_agent.cli.history import handle_history
 from multimodal_agent.cli.printing import print_markdown_with_meta
 from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.config import get_config, set_config_field
+from multimodal_agent.core.interface import get_agent
 from multimodal_agent.errors import AgentError
 from multimodal_agent.logger import get_logger
 from multimodal_agent.project_scanner import (
@@ -505,7 +506,7 @@ def handle_image(
     return 0
 
 
-def test_main(argv=None):
+def run_cli(argv=None):
     """
     Wrapper used by tests: behaves like a Click command but delegates to
     argparse.
@@ -522,8 +523,6 @@ def main():
 
 
 def _main(args, parser):
-    from multimodal_agent.core.agent_core import MultiModalAgent
-
     if args.version:
         print(f"multimodal-agent version {__version__}")
         return 0
@@ -551,7 +550,7 @@ def _main(args, parser):
         # Create agent instance
         enable_rag = not getattr(args, "no_rag", False)
         # create agent instance
-        agent = MultiModalAgent(model=args.model, enable_rag=enable_rag)
+        agent = get_agent(model=args.model, enable_rag=enable_rag)
 
     needs_engine = args.command in {"refactor", "explain", "gen"}
 

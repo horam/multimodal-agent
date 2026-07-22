@@ -55,15 +55,6 @@ class RAGStore:
     def get_recent_chunk(self, limit: int = 50) -> List[Chunk]:
         raise NotImplementedError
 
-    def search_similar(
-        self,
-        query_embedding: List[float],
-        model: str,
-        top_k: int = 5,
-        max_candidates: int = 1000,
-    ) -> List[Tuple[float, Chunk]]:
-        raise NotImplementedError
-
     def clear_all(self) -> None:
         raise NotImplementedError
 

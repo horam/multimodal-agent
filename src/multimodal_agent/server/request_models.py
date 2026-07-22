@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class GenerateRequest(BaseModel):
 
     prompt: str
     language: str | None = None
-    json: bool = True
+    json_response: bool = True
 
 
 class MemorySearchRequest(BaseModel):
@@ -37,8 +37,6 @@ class LearnProjectRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    # Designed so your earlier curl works:
-    # curl -X POST /chat -d '{"message":"hello"}'
     message: str
     session_id: Optional[str] = None
     no_rag: bool = False
@@ -46,40 +44,14 @@ class ChatRequest(BaseModel):
     context: Optional[dict] = None
 
 
-class ChatResponse(BaseModel):
-    text: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
-    usage: Optional[Dict[str, Any]] = None
-    session_id: Optional[str] = None
-
-
-class HistoryItem(BaseModel):
-    id: int
-    role: str
-    session_id: Optional[str]
-    content: str
-    created_at: str
-    source: Optional[str] = None
-
-
-class HistoryResponse(BaseModel):
-    items: List[HistoryItem]
-    limit: int
-    session: Optional[str] = None
-
-
-class SummaryResponse(BaseModel):
-    summary: str
-    limit: int
-    session: Optional[str] = None
-
-
 class BaseGenerateRequest(BaseModel):
     name: str = Field(..., description="Dart class name")
     project_root: str = Field(
         ...,
         description="Absolute path to Flutter project root",
-        example="Users/owner/projects/my_app",
+        json_schema_extra={
+            "example": "Users/owner/projects/my_app",
+        },
     )
 
     description: Optional[str] = Field(
@@ -111,7 +83,9 @@ class GenerateEnumRequest(BaseGenerateRequest):
     values: Optional[list[str]] = Field(
         default=None,
         description="Optional enum values",
-        example=["pending", "paid", "shipped"],
+        json_schema_extra={
+            "example": ["pending", "paid", "shipped"],
+        },
     )
 
 
@@ -119,7 +93,9 @@ class GenerateRepositoryRequest(BaseGenerateRequest):
     entity: Optional[str] = Field(
         default=None,
         description="Entity name the repository manages",
-        example="User",
+        json_schema_extra={
+            "example": "User",
+        },
     )
 
 
@@ -127,7 +103,9 @@ class GenerateUseCaseRequest(BaseGenerateRequest):
     entity: Optional[str] = Field(
         default=None,
         description="Entity name the usecase manages",
-        example="User",
+        json_schema_extra={
+            "example": "User",
+        },
     )
 
 
@@ -139,6 +117,9 @@ class RefactorRequest(BaseModel):
     code: str
 
 
-class GenerateCodeResponse(BaseModel):
-    code: str
-    path: Optional[str] = None
+class SetupRequest(BaseModel):
+    api_key: str
+
+
+class ConfigRequest(BaseModel):
+    pass

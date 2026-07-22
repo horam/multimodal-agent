@@ -1,12 +1,12 @@
 from .cli import (
     build_parser,
     main,
-    test_main,
+    run_cli,
 )
 
 __all__ = [
     "main",
-    "test_main",
+    "run_cli",
     "build_parser",
     "MultiModalAgent",
 ]

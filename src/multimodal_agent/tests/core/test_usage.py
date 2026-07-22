@@ -1,4 +1,4 @@
-from multimodal_agent import MultiModalAgent
+from multimodal_agent.core.interface import get_agent
 
 
 class DummyUsageClient:
@@ -18,7 +18,7 @@ class DummyUsageClient:
 
 
 def test_usage_in_text_mode():
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = DummyUsageClient()
 
     result = agent.ask("hello")
@@ -42,7 +42,7 @@ def test_usage_in_json_mode():
 
                 return Resp()
 
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     agent.client = DummyJSON()
 
     result = agent.ask("hi", response_format="json")
@@ -51,7 +51,7 @@ def test_usage_in_json_mode():
 
 
 def test_usage_offline_fake_mode(monkeypatch):
-    agent = MultiModalAgent(enable_rag=False)
+    agent = get_agent(enable_rag=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "")
 
     result = agent.ask("test")

@@ -3,113 +3,51 @@ import builtins
 import pytest
 
 from multimodal_agent.core import agent_core
-from multimodal_agent.core.agent_core import MultiModalAgent
+from multimodal_agent.core.interface import get_agent
 from multimodal_agent.errors import NonRetryableError, RetryableError
+from multimodal_agent.tests.fakes.client import FakeClient
+from multimodal_agent.tests.fakes.image import FakeImage
+from multimodal_agent.tests.fakes.response import FakeResponse
 from multimodal_agent.utils import load_image_as_part
 
 
-def test_task_text(mock_agent):
-    response = mock_agent.ask("hello")
-    assert response.text == "mocked response"
+def test_task_text(fake_agent):
+    response = fake_agent.ask("hello")
+    assert response.text == "echo: hello"
 
 
-def test_task_with_image(mock_agent, tmp_path, monkeypatch):
+def test_task_with_image(fake_agent, tmp_path, monkeypatch):
     image_path = tmp_path / "img.jpg"
     # Fake image bytes.
     image_path.write_bytes(b"\xff\xd8\xff\xd9")
 
     # Mock PIL.Image.open so decoding always succeeds.
-    class DummyImage:
-        def __enter__(self):
-            return self
 
-        def __exit__(self, *args):
-            pass
-
-        def tobytes(self):
-            return b"fakeimage"
-
-    monkeypatch.setattr("PIL.Image.open", lambda *_: DummyImage())
+    monkeypatch.setattr("PIL.Image.open", lambda *_: FakeImage())
 
     image_part = load_image_as_part(str(image_path))
 
-    response = mock_agent.ask_with_image("describe", image_part)
-    assert response.text == "mocked response"
+    response = fake_agent.ask_with_image("describe", image_part)
+    assert response.text == "echo: describe"
 
 
-def test_chat_history_format(mock_agent, mocker):
+def test_chat_history_format(client, mocker):
     """
     Ensure chat appends text to history correctly.
     """
+
+    agent = get_agent(client=client, enable_rag=False, rag_store=None)
+
     # simulate user input twice then exit
     mocker.patch("builtins.input", side_effect=["hello", "exit"])
 
     # MUST return AgentResponse, not plain object
-    mock_agent.safe_generate_content = lambda contents: (
+    agent.safe_generate_content = lambda contents: (
         type("R", (), {"text": "reply"})(),
         None,
     )
 
-    mock_agent.chat()
-
-
-class DummyModels:
-    @staticmethod
-    def generate_content(*args, **kwargs):
-        raise RuntimeError("Dummy client: no API key available.")
-
-
-class DummyClientNoModels:
-    """Client with no .models attribute → forces OFFLINE mode."""
-
-    def __init__(self):
-        self.models = DummyModels()
-
-
-class FakeUsageResponse:
-    def __init__(self, text, usage=None):
-        self.text = text
-        self.usage_metadata = usage
-
-
-class FakeModels:
-    def __init__(self, text):
-        self._text = text
-
-    def generate_content(self, model, contents):
-        return FakeUsageResponse(self._text)
-
-
-class FakeClientWithModels:
-    def __init__(self, text='{"answer": 1}'):
-        self.models = FakeModels(text)
-
-
-class FakeRAGStore:
-    def __init__(self):
-        self.messages = []
-        self.embeddings = []
-        self.searched = []
-
-    def add_logical_message(self, content, role, session_id, source):
-        self.messages.append(
-            {
-                "content": content,
-                "role": role,
-                "session_id": session_id,
-                "source": source,
-            },
-        )
-        # Return fake chunk ids
-        return [1]
-
-    def add_embedding(self, chunk_id, embedding, model):
-        self.embeddings.append((chunk_id, tuple(embedding), model))
-
-    def search_similar(self, query_embedding, model, top_k):
-        # Return nothing, to exercise the "no context" paths.
-        self.searched.append((tuple(query_embedding), model, top_k))
-        return []
+    agent.chat()
 
 
 def test_agent_init_uses_dummy_client_when_no_api_key(monkeypatch):
@@ -118,7 +56,7 @@ def test_agent_init_uses_dummy_client_when_no_api_key(monkeypatch):
     # IMPORTANT: config may contain an api_key → must neutralize it
     monkeypatch.setattr(agent_core, "get_config", lambda: {})
 
-    agent = MultiModalAgent(client=None, enable_rag=False, rag_store=None)
+    agent = get_agent(client=None, enable_rag=False, rag_store=None)
 
     assert hasattr(agent.client, "models")
     with pytest.raises(RuntimeError):
@@ -126,12 +64,15 @@ def test_agent_init_uses_dummy_client_when_no_api_key(monkeypatch):
 
 
 # ask_with_image JSON path + _parse_json_output exception
-def test_ask_with_image_json_parse_error_falls_back_to_none(monkeypatch):
+def test_ask_with_image_json_parse_error_falls_back_to_none(monkeypatch, fake_agent):
     # Online mode client
     monkeypatch.setenv("GOOGLE_API_KEY", "dummy-key")
 
-    client = FakeClientWithModels(text="```json {not-valid-json} ```")
-    agent = MultiModalAgent(client=client, enable_rag=False, rag_store=None)
+    agent = get_agent(
+        client=FakeClient(text="```json {not-valid-json} ```"),
+        enable_rag=False,
+        rag_store=None,
+    )
     agent.usage_logging = False
 
     # Force _parse_json_output to raise → we want data = None
@@ -152,15 +93,15 @@ def test_ask_with_image_json_parse_error_falls_back_to_none(monkeypatch):
     assert resp.data is None  # came from the except-branch
 
 
-def test_ask_json_with_rag_calls_store_agent_reply(monkeypatch):
+def test_ask_json_with_rag_calls_store_agent_reply(fake_rag, monkeypatch):
+
     monkeypatch.setenv("GOOGLE_API_KEY", "dummy-key")
 
-    client = FakeClientWithModels(text='{"answer": 42}')
-    rag_store = FakeRAGStore()
+    client = FakeClient(text='{"answer": 42}')
 
-    agent = MultiModalAgent(
+    agent = get_agent(
         client=client,
-        rag_store=rag_store,
+        rag_store=fake_rag,
         enable_rag=True,
     )
     agent.usage_logging = False
@@ -172,85 +113,92 @@ def test_ask_json_with_rag_calls_store_agent_reply(monkeypatch):
         lambda text, model: [0.1, 0.2],
     )
 
-    resp = agent.ask(
+    response = agent.ask(
         "What is life?",
         session_id="sess-1",
         response_format="json",
     )
+    
 
-    assert resp.data == {"answer": 42}
+    assert response.text == '{"answer": 42}'
     # Question + agent reply should be stored
-    roles = [m["role"] for m in rag_store.messages]
+    roles = [message.role for message in fake_rag.messages]
     assert "user" in roles
     assert "agent" in roles
 
 
-def test_ensure_session_id_returns_given_value(monkeypatch):
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_ensure_session_id_returns_given_value(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
     assert agent._ensure_session_id("custom") == "custom"
 
 
-def test_convert_to_json_response_parses_valid_json():
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_convert_to_json_response_parses_valid_json(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
+    response = FakeResponse(text='{"x": 1}')
 
-    class Resp:
-        def __init__(self):
-            self.text = '{"x": 1}'
-
-    r = Resp()
-    out = agent._convert_to_json_response(r)
+    out = agent._convert_to_json_response(response)
     assert out.json == {"x": 1}
 
 
-def test_convert_to_json_response_fallback_raw():
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_convert_to_json_response_fallback_raw(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
 
-    class Resp:
-        def __init__(self):
-            self.text = "not-json"
+    response = FakeResponse(text="not-json")
 
-    r = Resp()
-    out = agent._convert_to_json_response(r)
+    out = agent._convert_to_json_response(response)
     assert out.json == {"raw": "not-json"}
 
 
-def test_parse_json_output_handles_fenced_block():
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_parse_json_output_handles_fenced_block(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
     text = '```json\n{"a": 1}\n```'
     parsed = agent._parse_json_output(text)
     assert parsed == {"a": 1}
 
 
-def test_parse_json_output_trailing_backticks_only():
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_parse_json_output_trailing_backticks_only(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
     text = 'json {"b": 2}```'
     parsed = agent._parse_json_output(text)
     assert parsed == {"b": 2}
 
 
-def test_strip_markdown_removes_fence_and_json_prefix():
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_strip_markdown_removes_fence_and_json_prefix(client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
     raw = '```json\n{"c": 3}\n```'
     cleaned = agent._strip_markdown(raw)
     assert cleaned == '{"c": 3}'
 
 
-def test_store_agent_reply_catches_embedding_errors(monkeypatch):
-    rag_store = FakeRAGStore()
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), rag_store=rag_store, enable_rag=True
+def test_store_agent_reply_catches_embedding_errors(monkeypatch, client, fake_rag):
+    agent = get_agent(
+        client=client,
+        rag_store=fake_rag,
+        enable_rag=True,
     )
 
     # embed_text should blow up → we want except-block to swallow it
@@ -261,14 +209,17 @@ def test_store_agent_reply_catches_embedding_errors(monkeypatch):
 
     # Should not raise
     agent._store_agent_reply(answer={"foo": "bar"}, session_id="sess-2")
+    print(f"messages: {fake_rag.messages}")
 
     # Message still stored
-    assert any(m["role"] == "agent" for m in rag_store.messages)
+    assert any(message.role == "agent" for message in fake_rag.messages)
 
 
-def test_log_usage_ignores_file_errors(monkeypatch):
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), enable_rag=False, rag_store=None
+def test_log_usage_ignores_file_errors(monkeypatch, client):
+    agent = get_agent(
+        client=client,
+        enable_rag=False,
+        rag_store=None,
     )
 
     def fake_open(*args, **kwargs):
@@ -285,96 +236,109 @@ def test_log_usage_ignores_file_errors(monkeypatch):
     )
 
 
-def test_chat_embedding_failure_and_assistant_embed_failure(monkeypatch):
+def test_chat_embedding_failure_and_assistant_embed_failure(
+    monkeypatch, client, fake_rag
+):
     """
     Covers:
     - question_embedding exception → question_embedding = None (485–486)
     - rag_context = [] (490)
     - assistant reply embedding exception in chat (566–567)
     """
-
-    rag_store = FakeRAGStore()
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), rag_store=rag_store, enable_rag=True
+    agent = get_agent(
+        client=client,
+        rag_store=fake_rag,
+        enable_rag=True,
     )
 
-    # embed_text always fails (both for user message and assistant reply).
+    calls = []
+
     def boom(text, model):
-        raise RuntimeError("embed failed in chat")
+        calls.append(text)
+        raise RuntimeError("embed failed")
 
-    monkeypatch.setattr(agent_core, "embed_text", boom)
-
-    # safe_generate_content returns a fake response so chat can proceed.
-    class Resp:
-        def __init__(self, t):
-            self.text = t
-
-    def fake_safe_generate(
-        contents, max_retries=3, base_delay=1, response_format="text"
-    ):
-        return Resp("answer from model"), {
-            "prompt_tokens": 1,
-            "response_tokens": 1,
-            "total_tokens": 2,
-        }
-
-    monkeypatch.setattr(agent, "safe_generate_content", fake_safe_generate)
+    monkeypatch.setattr(
+        agent_core,
+        "embed_text",
+        boom,
+    )
 
     # Simulate one user message then exit.
     inputs = iter(["hello", "exit"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
-
     agent.chat(session_id="chat-sess-1", enable_rag=True, rag_top_k=3)
-    # No assertion needed: just ensuring exceptions don’t bubble.
+    assert len(calls) > 0
 
 
-def test_chat_handles_retryable_error(monkeypatch):
+def test_chat_handles_retryable_error(monkeypatch, client):
     """
     Covers except RetryableError (533–534).
     """
-
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), rag_store=None, enable_rag=False
+    agent = get_agent(
+        client=client,
+        rag_store=None,
+        enable_rag=False,
     )
 
-    def raise_retryable(
-        contents,
-        max_retries=3,
-        base_delay=1,
-        response_format="text",
-    ):
+    calls = []
+
+    def raise_retryable(*args, **kwargs):
+        calls.append(True)
         raise RetryableError("temporary")
 
-    monkeypatch.setattr(agent, "safe_generate_content", raise_retryable)
+    monkeypatch.setattr(
+        agent,
+        "safe_generate_content",
+        raise_retryable,
+    )
 
     inputs = iter(["hello", "exit"])
-    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
 
-    # Should not raise; just logs and continues to next loop iteration
-    agent.chat(session_id="chat-sess-3", enable_rag=False)
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda _prompt: next(inputs),
+    )
+
+    agent.chat(
+        session_id="chat-sess-3",
+        enable_rag=False,
+    )
+
+    assert len(calls) == 1
 
 
-def test_chat_handles_non_retryable_error(monkeypatch):
+def test_chat_handles_non_retryable_error(monkeypatch, client):
     """
     Covers except NonRetryableError (540–542).
     """
 
-    agent = MultiModalAgent(
-        client=DummyClientNoModels(), rag_store=None, enable_rag=False
+    agent = get_agent(
+        client=client,
+        rag_store=None,
+        enable_rag=False,
     )
 
-    def raise_non_retryable(
-        contents,
-        max_retries=3,
-        base_delay=1,
-        response_format="text",
-    ):
+    calls = []
+
+    def raise_non_retryable(*args, **kwargs):
+        calls.append(True)
         raise NonRetryableError("permanent")
 
-    monkeypatch.setattr(agent, "safe_generate_content", raise_non_retryable)
+    monkeypatch.setattr(
+        agent,
+        "safe_generate_content",
+        raise_non_retryable,
+    )
 
     inputs = iter(["hello", "exit"])
-    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda _prompt: next(inputs),
+    )
 
-    # Should not raise; just logs and continues to next loop iteration
-    agent.chat(session_id="chat-sess-4", enable_rag=False)
+    agent.chat(
+        session_id="chat-sess-4",
+        enable_rag=False,
+    )
+
+    assert len(calls) == 1

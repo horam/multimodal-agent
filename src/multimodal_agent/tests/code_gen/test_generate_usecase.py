@@ -14,21 +14,17 @@ def test_usecase_prompt_contains_name_and_entity():
     assert "entity `User`" in prompt
 
 
-def test_generate_usecase_success(tmp_path):
+def test_generate_usecase_success(tmp_path, client):
     (tmp_path / "pubspec.yaml").write_text("name: test")
 
-    with patch(
-        "multimodal_agent.codegen.engine.CodeGenEngine.generate_usecase",
-        return_value="class FetchUser { Future<User> call() async {} }",
-    ):
-        response = client.post(
-            "/generate/usecase",
-            json={
-                "name": "FetchUser",
-                "entity": "User",
-                "project_root": str(tmp_path),
-            },
-        )
+    response = client.post(
+        "/generate/usecase",
+        json={
+            "name": "FetchUser",
+            "entity": "User",
+            "project_root": str(tmp_path),
+        },
+    )
 
     assert response.status_code == 200
     assert "FetchUser" in response.json()["code"]

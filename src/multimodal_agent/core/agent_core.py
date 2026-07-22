@@ -315,7 +315,7 @@ class MultiModalAgent:
                 top_k=5,
             )
 
-            rag_context = [chunk.content for score, chunk in similar]
+            rag_context = [chunk.content for chunk in similar]
 
             system_prompt = (
                 "You are a helpful assistant. Use the context if relevant. "

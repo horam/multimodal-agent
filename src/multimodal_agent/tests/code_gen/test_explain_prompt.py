@@ -1,11 +1,8 @@
-from unittest.mock import patch
-
 from fastapi.testclient import TestClient
 
+from multimodal_agent.codegen.engine import CodeGenEngine
 from multimodal_agent.codegen.explain_template import build_explain_prompt
 from multimodal_agent.server import app
-
-client = TestClient(app)
 
 
 def test_build_explain_prompt_contains_code_and_task():
@@ -17,28 +14,27 @@ def test_build_explain_prompt_contains_code_and_task():
     assert "Do NOT rewrite the code" in prompt
 
 
-def test_explain_code_success():
-    with patch(
-        "multimodal_agent.codegen.engine.CodeGenEngine.explain_code",
-        return_value="This explains the code.",
-    ):
-        resp = client.post(
-            "/explain",
-            json={"code": "class A {}"},
-        )
-
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["text"] == "This explains the code."
-
-
-def test_explain_code_offline(monkeypatch):
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-
-    resp = client.post(
+def test_explain_code_success(client, fake_engine):
+    response = client.post(
         "/explain",
         json={"code": "class A {}"},
     )
 
-    assert resp.status_code == 200
-    assert "OFFLINE_EXPLANATION" in resp.json()["text"]
+    assert response.status_code == 200
+    data = response.json()
+    assert data["text"] == "Explanation"
+    assert fake_engine.last_code == "class A {}"
+
+
+def test_explain_code_offline(monkeypatch, clean_app):
+    # clear the dependencies so we can see the impact of deleting keys
+    app.dependency_overrides.clear()
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    client = TestClient(clean_app)
+
+    response = client.post(
+        "/explain",
+        json={"code": "class A {}"},
+    )
+    assert response.status_code == 200
+    assert "OFFLINE_EXPLANATION" in response.json()["text"]

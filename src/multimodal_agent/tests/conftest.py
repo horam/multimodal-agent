@@ -1,79 +1,52 @@
 import pytest
+from fastapi.testclient import TestClient
 
-import multimodal_agent.rag.rag_store as rag_mod
-from multimodal_agent.core.agent_core import MultiModalAgent
-from multimodal_agent.rag import RAGStore
-
-
-@pytest.fixture
-def mock_client_response():
-    """
-    Fake Gemini response object with .text attribute.
-    """
-
-    class Response:
-        def __init__(self, text="mocked response"):
-            self.text = text
-
-    return Response()
+from multimodal_agent.server.app import create_app
+from multimodal_agent.server.app_state import state
+from multimodal_agent.server.dependencies import get_agent, get_engine
+from multimodal_agent.tests.fakes.agent import FakeAgent
+from multimodal_agent.tests.fakes.engine import FakeEngine
+from multimodal_agent.tests.fakes.rag import FakeRAG
 
 
 @pytest.fixture
-def mock_agent(mocker, mock_client_response):
-    """
-    Create a MultiModalAgent with a mocked client so no real API calls happen.
-    """
-    mock_client = mocker.Mock()
-    agent = MultiModalAgent(client=mock_client)
-
-    mocker.patch.object(
-        agent.client.models,
-        "generate_content",
-        return_value=mock_client_response,
-    )
-    return agent
+def fake_agent(fake_rag):
+    return FakeAgent(rag_store=fake_rag)
 
 
 @pytest.fixture
-def fake_part():
-    class FakePart:
-        data = b"fake-bytes"
-        mime_type = "image/jpeg"
-
-    return FakePart()
+def fake_engine():
+    return FakeEngine()
 
 
-@pytest.fixture(autouse=True)
-def no_real_rag(monkeypatch, request):
-    """
-    Disable SQLiteRAGStore for tests that are not testing the real DB.
-    """
-    if "use_real_rag" in getattr(request, "keywords", {}):
-        return  # let RAG tests hit real SQLite
+@pytest.fixture
+def fake_rag():
+    return FakeRAG()
 
-    class DummyStore(RAGStore):
-        def __init__(self, *a, **k):
-            pass
 
-        def add_chunk(self, *a, **k):
-            return 1
+@pytest.fixture
+def app(fake_agent, fake_engine):
+    state.reload()
 
-        def add_embedding(self, *a, **k):
-            return None
+    state.agent = fake_agent
+    state.engine = fake_engine
 
-        def get_recent_chunks(self, *a, **k):
-            return []
+    app = create_app()
+    app.dependency_overrides[get_agent] = lambda: fake_agent
+    app.dependency_overrides[get_engine] = lambda: fake_engine
+    return app
 
-        def get_recent_chunk(self, *a, **k):
-            return []
 
-        def search_similar(self, *a, **k):
-            return []
+@pytest.fixture
+def client(app):
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
 
-        def delete_chunk(self, *a, **k):
-            return None
 
-        def clear_all(self):
-            return None
-
-    monkeypatch.setattr(rag_mod, "SQLiteRAGStore", DummyStore)
+@pytest.fixture
+def clean_app():
+    state.reload()
+    app = create_app()
+    app.dependency_overrides.clear()
+    return app

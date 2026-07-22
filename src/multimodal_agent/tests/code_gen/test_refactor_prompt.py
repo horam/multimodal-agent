@@ -1,37 +1,32 @@
-from unittest.mock import patch
-
 from fastapi.testclient import TestClient
 
 from multimodal_agent.codegen.refactor_template import build_refactor_prompt
-from multimodal_agent.server import app
-
-client = TestClient(app)
 
 
-def test_refactor_code_success():
-    with patch(
-        "multimodal_agent.codegen.engine.CodeGenEngine.refactor_code",
-        return_value="class A { const A(); }",
-    ):
-        response = client.post(
-            "/refactor",
-            json={"code": "class A {}"},
-        )
+def test_refactor_code_success(client, fake_engine):
+    fake_engine.refactor_response = "class A { const A();}"
+    response = client.post(
+        "/refactor",
+        json={"code": "class A {}"},
+    )
+    print(f"result is {response.json()}")
 
     assert response.status_code == 200
     assert "const A()" in response.json()["text"]
 
 
-def test_refactor_code_offline(monkeypatch):
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+def test_refactor_code_offline(monkeypatch, clean_app):
 
-    resp = client.post(
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    client = TestClient(clean_app)
+
+    response = client.post(
         "/refactor",
         json={"code": "class A {}"},
     )
 
-    assert resp.status_code == 200
-    assert resp.json()["text"] == "class A {}"
+    assert response.status_code == 200
+    assert response.json()["text"] == "class A {}"
 
 
 def test_build_refactor_prompt_without_goal():
@@ -63,15 +58,10 @@ def test_build_refactor_prompt_is_stripped():
 def test_build_refactor_prompt_preserves_code_format():
 
     code = """
-
 class A {
-
   final int x;
-
   A(this.x);
-
 }
-
 """.strip()
 
     result = build_refactor_prompt(code=code)

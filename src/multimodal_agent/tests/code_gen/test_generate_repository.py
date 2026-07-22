@@ -1,31 +1,19 @@
-from unittest.mock import patch
-
-from fastapi.testclient import TestClient
-
 from multimodal_agent.codegen.repository_template import (
     build_repository_fallback,
     build_repository_prompt,
 )
-from multimodal_agent.server import app
-
-client = TestClient(app)
 
 
-def test_generate_repository_success(tmp_path):
+def test_generate_repository_success(tmp_path, client):
     (tmp_path / "pubspec.yaml").write_text("name: test")
-
-    with patch(
-        "multimodal_agent.codegen.engine.CodeGenEngine.generate_repository",
-        return_value="abstract class UserRepository {}",
-    ):
-        response = client.post(
-            "/generate/repository",
-            json={
-                "name": "UserRepository",
-                "entity": "User",
-                "project_root": str(tmp_path),
-            },
-        )
+    response = client.post(
+        "/generate/repository",
+        json={
+            "name": "UserRepository",
+            "entity": "User",
+            "project_root": str(tmp_path),
+        },
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -33,21 +21,17 @@ def test_generate_repository_success(tmp_path):
     assert "UserRepository" in data["code"]
 
 
-def test_generate_repository_invalid_name(tmp_path):
+def test_generate_repository_invalid_name(tmp_path, client):
     (tmp_path / "pubspec.yaml").write_text("name: test")
-    with patch(
-        "multimodal_agent.codegen.engine.CodeGenEngine.generate_repository",
-        return_value="abstract class UserRepository {}",
-    ):
-        resp = client.post(
-            "/generate/repository",
-            json={
-                "name": "_Repo",
-                "project_root": str(tmp_path),
-            },
-        )
+    response = client.post(
+        "/generate/repository",
+        json={
+            "name": "_Repo",
+            "project_root": str(tmp_path),
+        },
+    )
 
-    assert resp.status_code == 400
+    assert response.status_code == 400
 
 
 def test_build_repository_prompt_basic():

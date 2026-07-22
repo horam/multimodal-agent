@@ -1,6 +1,6 @@
 import pytest
 
-from multimodal_agent.core.agent_core import MultiModalAgent
+from multimodal_agent.core.interface import get_agent
 from multimodal_agent.errors import RetryableError
 
 
@@ -11,7 +11,7 @@ class DummyRetryable(Exception):
 
 
 def test_safe_generate_content_retries_and_fails(monkeypatch, caplog):
-    agent = MultiModalAgent(client=None)
+    agent = get_agent(client=None)
 
     class DummyRetryable(Exception):
         def __init__(self, msg):
