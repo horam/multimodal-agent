@@ -25,7 +25,6 @@ async function main() {
   ensureDir(path.join(workspacePath, "lib", "widgets"));
   ensureDir(path.join(workspacePath, "lib", "usecases"));
 
-
   await runTests({
     extensionDevelopmentPath,
     extensionTestsPath,

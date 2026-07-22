@@ -4,7 +4,7 @@
   "description": "Generate Flutter code using multimodal-agent",
   "module": "commonjs",
   "moduleResolution": "node",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "publisher": "horam",
   "engines": {
     "vscode": "^1.85.0"
@@ -26,6 +26,19 @@
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "multimodalAgent.setup",
+        "title": "Multimodal Agent: Setup"
+
+      },
+      {
+        "command": "multimodalAgent.setApiKey",
+        "title": "Multimodal Agent: Set API Key"
+      },
+      {
+        "command": "multimodalAgent.startServer",
+        "title": "Multimodal Agent: Start Server"
+      },
       {
         "command": "multimodalAgent.generateWidget",
         "title": "Multimodal Agent: Generate Widget"
@@ -66,7 +79,7 @@
     "@eslint/js": "^9.39.4",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.0.1",
+    "@types/node": "^25.9.1",
     "@types/vscode": "^1.107.0",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
@@ -75,9 +88,9 @@
     "c8": "^10.1.3",
     "eslint": "^9.39.4",
     "glob": "^13.0.0",
-    "mocha": "^11.3.0",
+    "mocha": "^11.7.6",
     "prettier": "^3.7.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.2"
   }
 }

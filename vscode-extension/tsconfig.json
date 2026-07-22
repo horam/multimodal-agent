@@ -3,11 +3,13 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "ES2020",
+    "ignoreDeprecations": "6.0",
     "rootDir": "src",
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node", "vscode"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", ".vscode-test"]

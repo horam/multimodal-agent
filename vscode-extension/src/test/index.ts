@@ -2,7 +2,6 @@ import Mocha from "mocha";
 import { glob } from "glob";
 import * as path from "path";
 
-
 export async function run(): Promise<void> {
   const mocha = new Mocha({
     ui: "tdd",
@@ -20,8 +19,8 @@ export async function run(): Promise<void> {
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
       if (failures > 0) {
-        reject(new Error(`${failures} tests failed.`))
-      }else{
+        reject(new Error(`${failures} tests failed.`));
+      } else {
         resolve();
       }
     });

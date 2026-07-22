@@ -20,6 +20,7 @@ export function getServerUrl(): string {
 
 export async function post<T>(path: string, payload: unknown): Promise<T> {
   let url: string;
+  console.log(`[Agent] sending request to server`);
   try {
     url = `${getServerUrl()}${path}`;
   } catch (error) {
@@ -33,9 +34,11 @@ export async function post<T>(path: string, payload: unknown): Promise<T> {
         "Content-Type": "application/json",
       },
     });
+    console.log("[Agent] response received successfully", response);
 
     return response.data;
   } catch (error) {
+    console.log("[Agent] error during request:", error);
     handleAxiosError(error, path);
     throw error;
   }

@@ -2,10 +2,6 @@ import * as vscode from "vscode";
 import axios from "axios";
 import { post } from "../api/serverClient";
 
-function isServerDown(err: unknown): boolean {
-  return axios.isAxiosError(err) && err.code === "ECONNREFUSED";
-}
-
 export async function explainCode() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -27,10 +23,13 @@ export async function explainCode() {
 
         vscode.window.showInformationMessage(result.text);
       } catch (err: unknown) {
-        if (isServerDown(err)) {
-          vscode.window.showInformationMessage(
-            "OFFLINE: Unable to explain code. Server not running.",
-          );
+        console.log("[ExplainCode full error: ", err);
+
+        if (axios.isAxiosError(err)) {
+          const message = err.response?.data?.detail ?? err.message;
+          vscode.window.showErrorMessage(message);
+        } else {
+          vscode.window.showErrorMessage(`Command failed: ${String(err)}`);
         }
       }
     },
